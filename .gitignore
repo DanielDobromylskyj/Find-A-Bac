@@ -1,0 +1,9 @@
+
+trainingPoints.txt
+/trainingData
+*.tiff
+/server/softwarerendercontext
+/server/softwarerenderbackend
+/server/pixelengine
+*.db
+*.png

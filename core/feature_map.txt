@@ -1,0 +1,39 @@
+
+inline float sigmoid(float x) {
+    return 1.0f / (1.0f + exp(-x));
+}
+
+__kernel void filter(__global float *inputs, __global float *weights, __global float *biases, __global float *outputs,
+                     int input_width, int input_height, int filter_width, int filter_height, int filter_horizontal_count) {
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+
+    int x_index = x * filter_width;
+    int y_index = y * filter_height;
+
+    float cell_sum = 0;
+    for (int dx = 0; dx < filter_width; dx++) {
+       for (int dy = 0; dy < filter_height; dy++) {
+            // Only sum if data is in range / bounds
+            if (((y_index + dy) < input_height) && ((x_index + dx) < input_width)) {
+                int offset = ((y_index + dy) * input_width) + (x_index + dx);
+                int weight_index = (dy * filter_width) + dx;
+
+                float weighted_value = inputs[offset] * weights[weight_index];
+                cell_sum = cell_sum + weighted_value;
+
+                if (offset > input_width * input_height) {
+                    printf("[FEATURE MAP] Offset: %d = (%d + %d) * %d  + (%d + %d)", offset, y_index, dy, input_width, x_index, dx);
+                }
+
+                if (offset > input_width * input_height) {
+                    printf("[FEATURE MAP] weight_index: %d = (%d * %d) + %d > max: %d", weight_index, dy, filter_width, dx, input_width * input_height);
+                }
+
+            }
+       }
+    }
+
+    int output_index = (y * filter_horizontal_count) + x;
+    outputs[output_index] = sigmoid(cell_sum);
+}

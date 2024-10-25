@@ -1,0 +1,70 @@
+
+inline float sigmoid(float x) {
+    return 1.0f / (1.0f + exp(-x));
+}
+
+inline float derivative_sigmoid(float x) {
+    float sig = sigmoid(x);
+    return sig * (1 - sig);
+}
+
+__kernel void filter(__global float *input_error, __global float *weights, __global float *biases,
+                     __global float *output_error, __global float *input_values, __global float *output_values,
+                     __global float *weight_nudges, __global float *bias_nudges,
+                     int input_width, int input_height, int filter_width, int filter_height, int filter_horizontal_count, float learning_rate) {
+
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+
+    int x_index = x * filter_width;
+    int y_index = y * filter_height;
+
+    if (x_index > input_width) {
+        printf("[FEATURE MAP][TRAIN] x: %d x_global: %d", x_index, x);
+    }
+
+    if (y_index > input_height) {
+        printf("[FEATURE MAP][TRAIN] y: %d y_global: %d", y_index, y);
+    }
+
+
+    for (int dx = 0; dx < filter_width; dx++) {
+       for (int dy = 0; dy < filter_height; dy++) {
+            int input_index = ((y_index + dy) * input_width) + (x_index + dx);
+            int error_out_index = dy * filter_width + dx;
+
+            if ((input_width * input_height) <= input_index) {
+                printf("[FEATURE MAP][TRAIN] Input Index: %d x: %d y: %d dx: %d dy: %d", input_index, x_index, y_index, dx, dy);
+            }
+
+            if ((filter_width * filter_height) <= error_out_index) {
+                printf("[FEATURE MAP][TRAIN] Output Index: %d dx: %d dy: %d", error_out_index, dx, dy);
+            }
+
+            float weight_error = input_values[input_index] * output_error[error_out_index] * learning_rate;
+            weight_nudges[input_index] = weight_error;
+
+            float error = output_error[error_out_index] * weights[input_index];// * learning_rate;
+            input_error[input_index] = error;
+       }
+    }
+}
+
+
+
+__kernel void sum_errors(__global float *errors, __global float *summed, int filter_width, int filter_height,
+                         int error_width, int error_height, int blocks_per_x, int blocks_per_y) {
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+
+    float local_sum = 0;
+    for (int dx = 0; dx < blocks_per_x; dx++) {
+       for (int dy = 0; dy < blocks_per_y; dy++) {
+            int index = (dy * filter_height + y) * error_width + (dx * filter_width + x);
+            local_sum += errors[index];
+       }
+    }
+
+    int global_index = y * filter_width + x;
+    summed[global_index] = local_sum;
+}

@@ -1,0 +1,8 @@
+
+__kernel void backward_pass(__global float *values, float mul, float add) {
+    int node_index = get_global_id(0);
+
+    float new_value = values[node_index];
+    float old_value = (new_value - add) / mul;
+    values[node_index] = old_value;
+}

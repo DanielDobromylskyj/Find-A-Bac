@@ -1,0 +1,64 @@
+
+inline float relu(float x) {
+    return fmax(0.0f, x);
+}
+
+inline float sigmoid(float x) {
+    return 1.0f / (1.0f + exp(-x));
+}
+
+__kernel void forward_pass(__global float *inputs, __global float *weights, __global float *biases, __global float *outputs,
+                     int input_length, int activation_type) {
+    int node_out = get_global_id(0);
+
+    float node_out_sum = 0;
+    for (int node_in = 0; node_in < input_length; node_in++) {
+        int weight_index = node_out * input_length + node_in;
+        float weighted_value = inputs[node_in] * weights[weight_index];
+        node_out_sum = node_out_sum + weighted_value;
+
+        if (isnan(inputs[node_in])) {
+            printf("[FULL POP] NaN in input %d", node_in);
+        }
+        if (isnan(weights[weight_index])) {
+            printf("[FULL POP] NaN in weight %d", weight_index);
+        }
+
+        if (isnan(node_out_sum)) {
+            printf("[FULL POP] NaN in sum. nodes: (%d, %d), calc: %f * %f", node_in, node_out, inputs[node_in], weights[weight_index]);
+        }
+    }
+
+    node_out_sum = node_out_sum + biases[node_out];
+
+    if (isnan(biases[node_out])) {
+        printf("[FULL POP] Bias Has NaN (node_out = %d)", node_out);
+    }
+
+    if (isnan(node_out_sum)) {
+        printf("[FULL POP] Sum Has NaN (node_out = %d)", node_out);
+    }
+
+    float activated = 0;
+
+    switch (activation_type) {
+            case 1:  // ReLU
+                activated = relu(node_out_sum);
+                break;
+            case 2:  // Sigmoid
+                activated = sigmoid(node_out_sum);
+                break;
+            case 3: // ReLU+
+                activated = relu(node_out_sum) / 100;
+            default:
+                activated = node_out_sum;
+                break;
+    }
+
+    if (isnan(activated)) {
+        printf("[FULL POP] activated value Has NaN (activated = %d)", activated);
+    }
+
+
+    outputs[node_out] = activated;
+}

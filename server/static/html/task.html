@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mycobacterium Detection Web Interface</title>
+    <!-- Google Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f4f4f9;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #4CAF50;
+        }
+
+        .center_me {
+            text-align: center;
+        }
+
+        #uploadForm {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        input[type="file"], select {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            width: 300px;
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        #backButton {
+            color: #4CAF50;
+            font-size: 14px;
+            border: none;
+            background: none;
+            cursor: pointer;
+            text-decoration: underline;
+            margin: 10px;
+        }
+        #backButton:hover {
+            color: #388E3C;
+        }
+
+        #progress-bar-container {
+            width: 100%;
+            background-color: #ddd;
+            border-radius: 10px;
+            margin: 20px 0;
+            height: 20px;
+        }
+
+        #progress-bar {
+            height: 100%;
+            width: 0%;
+            background-color: #4CAF50;
+            border-radius: 10px;
+            transition: width 0.4s ease;
+        }
+
+        #output, #result {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 18px;
+        }
+
+        #imageGrid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            grid-gap: 10px;
+            margin-top: 20px;
+        }
+
+        #imageGrid img {
+            width: 100%;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        @media (max-width: 768px) {
+            input[type="file"], select {
+                width: 100%;
+            }
+        }
+
+        .image-container {
+          position: relative;
+          display: inline-block;
+        }
+
+        .image-container img.second {
+          display: none;
+          position: absolute;
+          top: 0;
+          left: 0;
+        }
+
+        .image-container:hover img.first {
+          display: none;
+        }
+
+        .image-container:hover img.second {
+          display: block;
+        }
+
+        .canvas-container {
+          position: relative;
+          width: 500px;  /* Width of the canvas */
+          height: 400px; /* Height of the canvas */
+        }
+
+        canvas {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div>
+        <div>
+            <a href="../account" id="backButton">Back</a>
+            <div id="header-container">
+                <h1>Task Viewer</h1>
+                <p class="center_me" id="task_id">Loading...</p>
+            </div>
+        </div>
+    </div>
+    <div style="display: flex; justify-content: center;">
+         <div class="canvas-container">
+            <canvas id="scan_canvas1" width="500" height="400"></canvas>
+            <canvas id="scan_canvas2" width="500" height="400"></canvas>
+        </div>
+    </div>
+
+    <div>
+        <div id="progress-bar-container">
+            <div id="progress-bar"></div>
+        </div>
+
+        <div id="result"></div>
+
+        <div id="imageGrid"></div>
+    </div>
+
+    <script>
+        const js_task_id = ""; // Gets replaced when html is loaded
+
+        let eventSource = null;
+        const addedImagePaths = new Set();
+
+        const progressBar = document.getElementById("progress-bar")
+
+        const canvas1 = document.getElementById("scan_canvas1");
+        const canvas2 = document.getElementById("scan_canvas2");
+
+        const ctx = canvas1.getContext("2d");
+        const ctx2 = canvas2.getContext("2d");
+
+        ctx2.clearRect(0, 0, canvas2.width, canvas2.height)
+
+        const img = new Image();
+        let boxX = 0, boxY = 0, boxWidth = 1, boxHeight = 1;
+
+        async function load() {
+            const element = document.getElementById("task_id");
+            element.innerText = "Connecting...";
+
+            await fetch(`get_task_image?id=${js_task_id}`, {
+                method: 'GET',
+            })
+                .then(response => response.json())
+                .then(response => {
+                    boxWidth = response.width;
+                    boxHeight = response.height;
+
+                    img.src = `../${response.img_url}`;
+                    img.onload = function() {
+                        ctx.drawImage(img, 0, 0, canvas1.width, canvas1.height);
+                        drawRedBox();
+                    };
+                })
+
+            await fetch(`get_task_scan_areas?id=${js_task_id}`, {
+                method: 'GET',
+            })
+                .then(response => response.json())
+                .then(response => {
+                    if (response.processing === false) {
+                        response.scan_areas.forEach((area) => {
+                            ctx2.fillStyle = 'rgba(0, 255, 0, 0.5)';  // Light transparent green
+
+                            const x = area[0] / (1024 / canvas2.width);
+                            const y = area[1] / (1024 / canvas2.height);
+                            const w = (area[2] - area[0]) / (1024 / canvas2.width);
+                            const h = (area[3] - area[1]) / (1024 / canvas2.height);
+
+                            ctx2.fillRect(x, y, w, h);  // Draw filled trail box
+                        });
+                    } else {
+                        let area_count = 0;
+                        response.scan_areas.forEach((area) => {
+                            if (area_count < response.region_index) {
+                                ctx2.fillStyle = 'rgba(0, 255, 0, 0.5)';  // Light transparent green
+
+                                const x = area[0] / (1024 / canvas2.width);
+                                const y = area[1] / (1024 / canvas2.height);
+                                const w = (area[2] - area[0]) / (1024 / canvas2.width);
+                                const h = (area[3] - area[1]) / (1024 / canvas2.height) + 0.5;
+
+                                ctx2.fillRect(x, y, w, h);  // Draw filled trail box
+                                area_count++;
+                            }
+                        });
+                    }
+                })
+
+            if (img) {
+                if (eventSource) {
+                    eventSource.close();
+                }
+
+                eventSource = new EventSource(`view_task_progress?id=${js_task_id}`)
+                element.innerText = js_task_id;
+
+                eventSource.onmessage = (event) => {
+                    const result = JSON.parse(event.data);
+                    progressBar.style.width = result.progress + '%';
+                    document.getElementById('result').textContent = `Integer Result: ${result.integerResult}`;
+
+                    moveBox(result.x, result.y);
+                    //console.log(result.x, result.y);
+
+                    const imageGrid = document.getElementById('imageGrid');
+                    for (const imagePath of result.imagePaths) {
+                        if (!addedImagePaths.has(imagePath[0])) {
+                            const img_div = document.createElement('div');
+                            img_div.className = "image-container";
+
+                            const img1 = document.createElement('img');
+                            img1.src = imagePath[0];
+                            img1.className = "first";
+
+                            const img2 = document.createElement('img');
+                            img2.src = imagePath[1];
+                            img2.className = "second";
+
+                            img_div.appendChild(img1);
+                            img_div.appendChild(img2);
+
+                            imageGrid.appendChild(img_div);
+                            addedImagePaths.add(imagePath[0]);
+                        }
+                    }
+
+                    if (result.complete === true) {
+                        eventSource.close();
+                        eventSource.onmessage = {}
+                    }
+                };
+            }
+        }
+
+         function drawGreenTrail() {
+            // Semi-transparent green fill
+            ctx2.fillStyle = 'rgba(0, 255, 0, 0.1)';  // Light transparent green
+            ctx2.fillRect(boxX / (1024 / canvas2.width), boxY / (1024 / canvas2.height), boxWidth, boxHeight);  // Draw filled trail box
+          }
+
+          // Function to draw the red box (without leaving a trail)
+          function drawRedBox() {
+              ctx.clearRect(0, 0, canvas1.width, canvas1.height);
+              ctx.drawImage(img, 0, 0, canvas1.width, canvas1.height);  // Redraw the image
+
+              // Draw the red outline box on top
+              ctx.strokeStyle = 'red';  // Red box color
+              ctx.lineWidth = 2;
+              ctx.strokeRect(boxX / (1024 / canvas1.width), boxY / (1024 / canvas1.height), boxWidth / (1024 / canvas1.width), boxHeight / (1024 / canvas1.height));  // Draw the box
+          }
+
+
+        function moveBox(newX, newY) {
+            drawGreenTrail();
+
+            boxX = newX;
+            boxY = newY;
+
+            drawRedBox();
+          }
+
+        load();
+    </script>
+</body>
+</html>

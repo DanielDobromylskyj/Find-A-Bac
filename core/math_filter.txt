@@ -1,0 +1,9 @@
+
+// Most Complex GPU Function ik ik
+__kernel void forward_pass(__global float *values_in, __global float *values_out, float mul, float add) {
+    int node_index = get_global_id(0);
+
+    float value = values_in[node_index];
+    float new_value = (value * mul) + add;
+    values_out[node_index] = new_value;
+}
