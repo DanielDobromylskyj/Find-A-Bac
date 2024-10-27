@@ -4,7 +4,7 @@ import numpy as np
 import pickle
 import math
 import zlib
-
+from concurrent.futures import ThreadPoolExecutor
 from numpy import ndarray
 import random
 
@@ -418,6 +418,10 @@ class Network:
             return layer_data.to_array(), node_values
 
         return layer_data.to_array()
+
+    def async_forward_pass(self, inputs: np.ndarray, save_layer_data: bool = False):
+        with ThreadPoolExecutor() as executor:
+            return executor.submit(self.forward_pass, inputs, save_layer_data)
 
     @staticmethod
     def __clamp(data, value):

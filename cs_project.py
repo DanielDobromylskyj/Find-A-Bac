@@ -4,10 +4,11 @@ import matplotlib.pyplot as plt
 import random
 import matplotlib
 
-OPENSLIDE_PATH = r'\openslide-win64\bin'
+OPENSLIDE_PATH = os.path.abspath(r'openslide-win64\bin')
+
 if hasattr(os, 'add_dll_directory'):
     # Windows
-    with os.add_dll_directory(os.getcwd() + OPENSLIDE_PATH):
+    with os.add_dll_directory(OPENSLIDE_PATH):
         import openslide
 else:
     import openslide

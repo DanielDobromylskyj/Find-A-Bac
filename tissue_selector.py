@@ -5,14 +5,13 @@ from PIL import ImageDraw
 
 sys.setrecursionlimit(3000)
 
-OPENSLIDE_PATH = r'\openslide-win64\bin'
+OPENSLIDE_PATH = os.path.abspath(r'openslide-win64\bin')
 
-import openslide
-
-try:
+if hasattr(os, 'add_dll_directory'):
+    with os.add_dll_directory(OPENSLIDE_PATH):
+        import openslide
+else:
     import openslide
-except OSError:
-    exit(f"Openslide not installed correctly, please ensure the openslide-win64 is installed in the correct location (In your .venv ideally)")
 
 
 # todo - check to see if we need to fill the internals of a "group" incase we missed any

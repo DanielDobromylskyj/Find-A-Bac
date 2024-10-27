@@ -7,3 +7,8 @@ trainingPoints.txt
 /server/pixelengine
 *.db
 *.png
+*.pyn
+*.pyn
+*.pyc
+*.pyn
+server/queue_pos.txt
