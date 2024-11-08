@@ -106,7 +106,9 @@ class WebServer:
         self.app.add_url_rule('/get_queue', view_func=self.get_queue, methods=['GET'])
         self.app.add_url_rule('/enqueue_files', view_func=self.enqueue_files, methods=['POST'])
         self.app.add_url_rule('/get_process_info', view_func=self.get_current_process, methods=['POST'])
-        self.app.add_url_rule('/task/<id>', view_func=self.get_task, methods=['GET'])
+        self.app.add_url_rule('/task/<task_id>', view_func=self.get_task, methods=['GET'])
+        self.app.add_url_rule('/task/share/<task_id>', view_func=self.get_task_share, methods=['GET'])
+        self.app.add_url_rule('/task/share/enable/<task_id>', view_func=self.enable_task_share, methods=['GET'])
         self.app.add_url_rule('/<path:filename>', view_func=self.serve_static_image)
         self.app.add_url_rule('/task/view_task_progress', view_func=self.view_task_progress)
         self.app.add_url_rule('/task/get_task_image', view_func=self.get_task_image, methods=['GET'])
@@ -180,6 +182,21 @@ class WebServer:
     def does_user_own_task(self, user, task_path):
         return self.server.queue_id_to_user_id(task_path) == user.id
 
+    def file_is_shared(self, task_id):
+        return self.server.get_share_status(task_id) == 1
+
+    @login_required
+    def enable_task_share(self, task_id):
+        if self.does_user_own_task(current_user, task_id):
+            self.server.set_share_status(task_id, 1)
+
+            if self.file_is_shared(task_id) is False:
+                return {}, 500
+
+            return {}, 200
+
+        return {}, 500
+
     @login_required
     def get_current_process(self):
         if self.is_currently_scanning_user(current_user):
@@ -188,23 +205,30 @@ class WebServer:
 
     @login_required
     def get_task_scan_areas(self):
-        if self.does_user_own_task(current_user, request.args.get('id')):
+        if self.does_user_own_task(current_user, request.args.get('id')) or self.file_is_shared(request.args.get('id')):
             return self.server.get_task_scan_areas(request.args.get('id')), 200
         return {}, 401
 
     @login_required
-    def get_task(self, id):
-        if self.does_user_own_task(current_user, id):
-            has_shared = request.args.get('share')
-            if has_shared and has_shared == "true":
-                return self.serve_html("share_me").replace('js_task_id = ""', f'js_task_id = "{id}"')
-            return self.serve_html("task").replace('js_task_id = ""', f'js_task_id = "{id}"')
+    def get_task(self, task_id):
+        if self.does_user_own_task(current_user, task_id):
+            return self.serve_html("task").replace('js_task_id = ""', f'js_task_id = "{task_id}"')
+
+        if self.file_is_shared(task_id):
+            return self.serve_html("task").replace('js_task_id = ""', f'js_task_id = "{task_id}"')
+
+        return {}, 401
+
+    @login_required
+    def get_task_share(self, task_id):
+        if self.does_user_own_task(current_user, task_id):
+            return self.serve_html("share_me").replace('js_task_id = ""', f'js_task_id = "{task_id}"')
 
         return {}, 401
 
     @login_required
     def get_task_image(self):
-        if self.does_user_own_task(current_user, request.args.get("id")):
+        if self.does_user_own_task(current_user, request.args.get('id')) or self.file_is_shared(request.args.get('id')):
             return jsonify(self.server.get_task_image(request.args.get("id"))), 200
         return {}, 401
 
@@ -213,8 +237,9 @@ class WebServer:
         if filename == "favicon.ico":
             return send_file("favicon.ico", mimetype='image/ico', as_attachment=True)
 
-        if os.path.exists(f"static/imgs/{filename}"):
-            return send_file(f"static/imgs/{filename}", mimetype='image/png', as_attachment=True)
+        full_static_image = os.path.join(os.getcwd(), f"static/imgs/{filename.split("/")[-1]}")
+        if os.path.exists(full_static_image):
+            return send_file(full_static_image, mimetype='image/png', as_attachment=True)
 
         # Set the folder where your static files (e.g., images) are stored
         return send_file("generated_images/" + filename, mimetype='image/png', as_attachment=True)
@@ -235,7 +260,7 @@ class WebServer:
 
     @login_required
     def view_task_progress(self):  # Stream Data
-        if self.does_user_own_task(current_user, request.args.get('id')):
+        if self.does_user_own_task(current_user, request.args.get('id')) or self.file_is_shared(request.args.get('id')):
             return Response(self.stream_task_progress(request.args.get('id')),
                             content_type='text/event-stream')
         return {}, 401

@@ -40,7 +40,8 @@ def create_db():
         file_path TEXT,
         detections INTIGER,
         locations TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        shared INTIGER DEFAULT 0
     )''')
 
     conn.commit()
@@ -84,6 +85,7 @@ class Processor:
         self.new_locations = []
         self.slide = None
         self.regions = None
+        self.nice_regions = None
 
         self.scan_x_scale = 0
         self.scan_y_scale = 0
@@ -99,6 +101,7 @@ class Processor:
         self.new_locations = []
         self.slide = None
         self.regions = None
+        self.nice_regions = None
 
     def get_scan_info(self):
         return {
@@ -149,12 +152,17 @@ class Processor:
         self.slide = self.__load(path)
         self.regions = self.optimise(path)
 
+        self.scan_x_scale = self.slide.dimensions[0] / 1024
+        self.scan_y_scale = self.slide.dimensions[1] / 1024
+
+        self.nice_regions = [
+                [x1 / self.scan_x_scale, y1 / self.scan_y_scale, x2 / self.scan_x_scale, y2 / self.scan_y_scale]
+                for x1, y1, x2, y2 in self.regions
+            ]
+
         total_area = sum(
             [math.ceil((x2 - x1) / 100) * 100 * math.ceil((y2 - y1) / 100) * 100 for x1, y1, x2, y2 in self.regions])
         totalScansRequired = total_area / 10000
-
-        self.scan_x_scale = self.slide.dimensions[0] / 1024
-        self.scan_y_scale = self.slide.dimensions[1] / 1024
 
         scan_area = self.scan_regions()
         location, region_index = next(scan_area)
@@ -244,10 +252,33 @@ class Server:
         c = db.cursor()
 
         c.execute("SELECT user_id FROM queue WHERE file_path = ?", (queue_path,))
-        results = c.fetchone()[0]
+        results = c.fetchone()
         db.close()
 
-        return results
+        if results:
+            return results[0]
+
+    @staticmethod
+    def get_share_status(file_path: str):
+        db = sqlite3.connect('server.db')
+        c = db.cursor()
+
+        c.execute("SELECT shared FROM queue WHERE file_path = ?", (file_path,))
+        results = c.fetchone()
+        db.close()
+
+        if results:
+            return results[0]
+
+    @staticmethod
+    def set_share_status(file_path: str, value: int):
+        db = sqlite3.connect('server.db')
+        c = db.cursor()
+
+        c.execute("UPDATE queue SET shared = ? WHERE file_path = ?", (value, file_path,))
+
+        db.commit()
+        db.close()
 
     @staticmethod
     def enqueue_file(user_id, file_path):
@@ -287,27 +318,27 @@ class Server:
         db.close()
 
     def get_task_scan_areas(self, task_id):
-        slide = self.load_slide(f"uploads/{task_id}")
-        scan_x_scale = slide.dimensions[0] / 1024
-        scan_y_scale = slide.dimensions[1] / 1024
-        scan_areas = [
-            [x1 / scan_x_scale, y1 / scan_y_scale, x2 / scan_x_scale, y2 / scan_y_scale]
-            for x1, y1, x2, y2 in Processor.optimise(f"uploads/{task_id}")
-        ]
+        if self.current_task != task_id:
+            slide = self.load_slide(f"uploads/{task_id}")
+            scan_x_scale = slide.dimensions[0] / 1024
+            scan_y_scale = slide.dimensions[1] / 1024
+            scan_areas = [
+                [x1 / scan_x_scale, y1 / scan_y_scale, x2 / scan_x_scale, y2 / scan_y_scale]
+                for x1, y1, x2, y2 in Processor.optimise(f"uploads/{task_id}")
+            ]
 
-        if task_id == self.current_task:  # this bit is done
-            return {
-                "scan_areas": scan_areas,
-                "processing": True,
-                "region_index": self.processor.current_region_index,
-                "region_xy": self.processor.get_pos_relative_to_current_region()
-            }
-
-        else:  # not this bit
             return {
                 "scan_areas": scan_areas,
                 "processing": False
             }
+
+        else:
+            return {
+                    "scan_areas": self.processor.nice_regions,
+                    "processing": True,
+                    "region_index": self.processor.current_region_index,
+                    "region_xy": self.processor.get_pos_relative_to_current_region()
+                }
 
     @staticmethod
     def load_slide(path: str):

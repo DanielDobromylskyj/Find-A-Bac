@@ -216,17 +216,10 @@
 
         <div id="imageGrid"></div>
     </div>
-
-<script>
-    const currentUrl = window.location.href;
-
-    const url = new URL(currentUrl);
-    url.searchParams.set('share', 'true'); // Adds ?share=true or updates it if it already exists
-
-    document.getElementById('share-link').href = url.href;
-</script>
 <script>
     const js_task_id = ""; // Gets replaced when html is loaded
+
+    document.getElementById('share-link').href = "/task/share/" + js_task_id;
 
     let eventSource = null;
     const addedImagePaths = new Set();
