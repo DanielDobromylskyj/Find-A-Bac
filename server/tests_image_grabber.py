@@ -9,7 +9,7 @@ else:
     import openslide
 
 
-path = r"C:\Users\danie\Documents\Programming\Python\CNN_Python_Opencl\trainingData\20240524_144610.tiff"
+path = r"E:\Python\findabac\Find-A-Bac\trainingData\16772.tiff"
 
 slide = openslide.open_slide(path)
 img = slide.get_thumbnail((4000, 4000))
