@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,13 +10,23 @@
             font-family: 'Roboto', sans-serif;
             background-color: #f4f4f9;
             color: #333;
+            height: 100%;
+            width: 100%;
+            padding: 0;
             margin: 0;
-            padding: 20px;
+        }
+
+        html {
+            height: 100%;
+            width: 100%;
+            padding: 0;
+            margin: 0;
         }
 
         h1 {
             text-align: center;
-            color: #4CAF50;
+            color: black;
+            margin: 0;
         }
 
         .center_me {
@@ -140,18 +149,57 @@
           width: 100%;
           height: 100%;
         }
+
+
+        nav {
+            display: flex;             /* Enables Flexbox */
+            justify-content: center;    /* Centers items horizontally */
+            gap: 10px;                  /* Space between each link */
+            padding-bottom: 5px;
+
+        }
+
+        #header-container {
+            background-color: #4CAF50;
+            color: black;
+            margin: 0;
+            padding: 0;
+        }
+
+        nav a {
+            display: inline-block; /* Make links behave like "boxes" */
+            padding: 10px 20px; /* Adds padding inside each box */
+            margin: 5px; /* Space between each button */
+            border: 2px solid #fff; /* Adds a border around each button */
+            border-radius: 5px; /* Optional, rounds the corners */
+            background-color: #66B966 ; /* Background color of each button */
+            color: #222222; /* Text color */
+            text-decoration: none; /* Removes underline from links */
+            font-weight: bold; /* Makes text bold */
+            font-size: 12px;
+        }
+
+        /* Center align links and add a hover effect */
+        nav a:hover {
+            background-color: #4CAF50;
+            color: #222222;
+        }
+
     </style>
 </head>
 <body>
-    <div>
-        <div>
-            <a href="../account" id="backButton">Back</a>
-            <div id="header-container">
-                <h1>Task Viewer</h1>
-                <p class="center_me" id="task_id">Loading...</p>
-            </div>
-        </div>
+    <div id="header-container">
+        <h1 style="padding-top: 15px">Task Viewer</h1>
+        <hr style="background-color: black; border: none; height: 1px">
     </div>
+
+    <nav>
+        <a href="/account">Back</a>
+        <a href="#" id="share-link">Share</a>
+        <a href="/account_settings">Account</a>
+    </nav>
+
+    <p class="center_me" id="task_id">Loading...</p>
     <div style="display: flex; justify-content: center;">
          <div class="canvas-container">
             <canvas id="scan_canvas1" width="500" height="400"></canvas>
@@ -169,152 +217,165 @@
         <div id="imageGrid"></div>
     </div>
 
-    <script>
-        const js_task_id = ""; // Gets replaced when html is loaded
+<script>
+    const currentUrl = window.location.href;
 
-        let eventSource = null;
-        const addedImagePaths = new Set();
+    const url = new URL(currentUrl);
+    url.searchParams.set('share', 'true'); // Adds ?share=true or updates it if it already exists
 
-        const progressBar = document.getElementById("progress-bar")
+    document.getElementById('share-link').href = url.href;
+</script>
+<script>
+    const js_task_id = ""; // Gets replaced when html is loaded
 
-        const canvas1 = document.getElementById("scan_canvas1");
-        const canvas2 = document.getElementById("scan_canvas2");
+    let eventSource = null;
+    const addedImagePaths = new Set();
 
-        const ctx = canvas1.getContext("2d");
-        const ctx2 = canvas2.getContext("2d");
+    const progressBar = document.getElementById("progress-bar")
 
-        ctx2.clearRect(0, 0, canvas2.width, canvas2.height)
+    const canvas1 = document.getElementById("scan_canvas1");
+    const canvas2 = document.getElementById("scan_canvas2");
 
-        const img = new Image();
-        let boxX = 0, boxY = 0, boxWidth = 1, boxHeight = 1;
+    const ctx = canvas1.getContext("2d");
+    const ctx2 = canvas2.getContext("2d");
 
-        async function load() {
-            const element = document.getElementById("task_id");
-            element.innerText = "Connecting...";
+    ctx2.clearRect(0, 0, canvas2.width, canvas2.height);
 
-            await fetch(`get_task_image?id=${js_task_id}`, {
-                method: 'GET',
+    let scan_areas = [];
+    let last_scan_region = 0;
+
+    const img = new Image();
+    let boxX = 0, boxY = 0, boxWidth = 1, boxHeight = 1;
+
+    function fill_green_background(area) {
+        ctx2.fillStyle = 'rgba(0, 255, 0, 0.5)';  // Light transparent green
+
+        const x = area[0] / (1024 / canvas2.width);
+        const y = area[1] / (1024 / canvas2.height);
+        const w = (area[2] - area[0]) / (1024 / canvas2.width);
+        const h = (area[3] - area[1]) / (1024 / canvas2.height) + 0.5;
+
+        ctx2.fillRect(x, y, w, h);  // Draw filled trail box
+    }
+
+    async function load() {
+        const element = document.getElementById("task_id");
+        element.innerText = "Connecting...";
+
+        await fetch(`get_task_image?id=${js_task_id}`, {
+            method: 'GET',
+        })
+            .then(response => response.json())
+            .then(response => {
+                boxWidth = response.width;
+                boxHeight = response.height;
+
+                img.src = `../${response.img_url}`;
+                img.onload = function() {
+                    ctx.drawImage(img, 0, 0, canvas1.width, canvas1.height);
+                    drawRedBox();
+                };
             })
-                .then(response => response.json())
-                .then(response => {
-                    boxWidth = response.width;
-                    boxHeight = response.height;
 
-                    img.src = `../${response.img_url}`;
-                    img.onload = function() {
-                        ctx.drawImage(img, 0, 0, canvas1.width, canvas1.height);
-                        drawRedBox();
-                    };
-                })
+        await fetch(`get_task_scan_areas?id=${js_task_id}`, {
+            method: 'GET',
+        })
+            .then(response => response.json())
+            .then(response => {
+                if (response.processing === false) {
+                    response.scan_areas.forEach((area) => {
+                        fill_green_background(area);
+                    });
+                } else {
+                    let area_count = 0;
+                    scan_areas = response.scan_areas;
+                    response.scan_areas.forEach((area) => {
+                        if (area_count < response.region_index) {
+                            fill_green_background(area);
 
-            await fetch(`get_task_scan_areas?id=${js_task_id}`, {
-                method: 'GET',
+                            area_count++;
+                            last_scan_region = area_count;
+                        }
+                    });
+                }
             })
-                .then(response => response.json())
-                .then(response => {
-                    if (response.processing === false) {
-                        response.scan_areas.forEach((area) => {
-                            ctx2.fillStyle = 'rgba(0, 255, 0, 0.5)';  // Light transparent green
 
-                            const x = area[0] / (1024 / canvas2.width);
-                            const y = area[1] / (1024 / canvas2.height);
-                            const w = (area[2] - area[0]) / (1024 / canvas2.width);
-                            const h = (area[3] - area[1]) / (1024 / canvas2.height);
+        if (img) {
+            if (eventSource) {
+                eventSource.close();
+            }
 
-                            ctx2.fillRect(x, y, w, h);  // Draw filled trail box
-                        });
-                    } else {
-                        let area_count = 0;
-                        response.scan_areas.forEach((area) => {
-                            if (area_count < response.region_index) {
-                                ctx2.fillStyle = 'rgba(0, 255, 0, 0.5)';  // Light transparent green
+            eventSource = new EventSource(`view_task_progress?id=${js_task_id}`)
+            element.innerText = js_task_id;
 
-                                const x = area[0] / (1024 / canvas2.width);
-                                const y = area[1] / (1024 / canvas2.height);
-                                const w = (area[2] - area[0]) / (1024 / canvas2.width);
-                                const h = (area[3] - area[1]) / (1024 / canvas2.height) + 0.5;
+            eventSource.onmessage = (event) => {
+                const result = JSON.parse(event.data);
+                progressBar.style.width = result.progress + '%';
+                document.getElementById('result').textContent = `Detections: ${result.integerResult}`;
 
-                                ctx2.fillRect(x, y, w, h);  // Draw filled trail box
-                                area_count++;
-                            }
-                        });
-                    }
-                })
+                moveBox(result.x, result.y);
 
-            if (img) {
-                if (eventSource) {
-                    eventSource.close();
+                if (result.scan_area !== last_scan_region) {
+                    fill_green_background(scan_areas[last_scan_region]);
+                    last_scan_region = result.scan_area;
                 }
 
-                eventSource = new EventSource(`view_task_progress?id=${js_task_id}`)
-                element.innerText = js_task_id;
+                const imageGrid = document.getElementById('imageGrid');
+                for (const imagePath of result.imagePaths) {
+                    if (!addedImagePaths.has(imagePath[0])) {
+                        const img_div = document.createElement('div');
+                        img_div.className = "image-container";
 
-                eventSource.onmessage = (event) => {
-                    const result = JSON.parse(event.data);
-                    progressBar.style.width = result.progress + '%';
-                    document.getElementById('result').textContent = `Integer Result: ${result.integerResult}`;
+                        const img1 = document.createElement('img');
+                        img1.src = imagePath[0];
+                        img1.className = "first";
 
-                    moveBox(result.x, result.y);
-                    //console.log(result.x, result.y);
+                        const img2 = document.createElement('img');
+                        img2.src = imagePath[1];
+                        img2.className = "second";
 
-                    const imageGrid = document.getElementById('imageGrid');
-                    for (const imagePath of result.imagePaths) {
-                        if (!addedImagePaths.has(imagePath[0])) {
-                            const img_div = document.createElement('div');
-                            img_div.className = "image-container";
+                        img_div.appendChild(img1);
+                        img_div.appendChild(img2);
 
-                            const img1 = document.createElement('img');
-                            img1.src = imagePath[0];
-                            img1.className = "first";
-
-                            const img2 = document.createElement('img');
-                            img2.src = imagePath[1];
-                            img2.className = "second";
-
-                            img_div.appendChild(img1);
-                            img_div.appendChild(img2);
-
-                            imageGrid.appendChild(img_div);
-                            addedImagePaths.add(imagePath[0]);
-                        }
+                        imageGrid.appendChild(img_div);
+                        addedImagePaths.add(imagePath[0]);
                     }
+                }
 
-                    if (result.complete === true) {
-                        eventSource.close();
-                        eventSource.onmessage = {}
-                    }
-                };
-            }
+                if (result.complete === true) {
+                    eventSource.close();
+                    eventSource.onmessage = {}
+                }
+            };
         }
+    }
 
-         function drawGreenTrail() {
-            // Semi-transparent green fill
-            ctx2.fillStyle = 'rgba(0, 255, 0, 0.35)';  // Light transparent green
-            ctx2.fillRect(boxX / (1024 / canvas2.width), boxY / (1024 / canvas2.height), boxWidth, boxHeight);  // Draw filled trail box
-          }
+  //function drawGreenTrail() {
+  //  // Semi-transparent green fill
+  //  ctx2.fillStyle = 'rgba(0, 255, 0, 0.35)';  // Light transparent green
+  //  ctx2.fillRect(boxX / (1024 / canvas2.width), boxY / (1024 / canvas2.height), boxWidth, boxHeight);  // Draw filled trail box
+  //}
 
-          // Function to draw the red box (without leaving a trail)
-          function drawRedBox() {
-              ctx.clearRect(0, 0, canvas1.width, canvas1.height);
-              ctx.drawImage(img, 0, 0, canvas1.width, canvas1.height);  // Redraw the image
+  // Function to draw the red box (without leaving a trail)
+  function drawRedBox() {
+      ctx.clearRect(0, 0, canvas1.width, canvas1.height);
+      ctx.drawImage(img, 0, 0, canvas1.width, canvas1.height);  // Redraw the image
 
-              // Draw the red outline box on top
-              ctx.strokeStyle = 'red';  // Red box color
-              ctx.lineWidth = 2;
-              ctx.strokeRect(boxX / (1024 / canvas1.width), boxY / (1024 / canvas1.height), boxWidth / (1024 / canvas1.width), boxHeight / (1024 / canvas1.height));  // Draw the box
-          }
+      // Draw the red outline box on top
+      ctx.strokeStyle = 'red';  // Red box color
+      ctx.lineWidth = 2;
+      ctx.strokeRect(boxX / (1024 / canvas1.width), boxY / (1024 / canvas1.height), boxWidth / (1024 / canvas1.width), boxHeight / (1024 / canvas1.height));  // Draw the box
+  }
 
 
-        function moveBox(newX, newY) {
-            drawGreenTrail();
+function moveBox(newX, newY) {
+    boxX = newX;
+    boxY = newY;
 
-            boxX = newX;
-            boxY = newY;
+    drawRedBox();
+  }
 
-            drawRedBox();
-          }
-
-        load();
-    </script>
+    load();
+</script>
 </body>
 </html>

@@ -206,6 +206,33 @@ def convert_regions_to_horizontal_strips(regions: list):
     return sorted(regions, key=lambda r: (r[1], r[0]))
 
 
+def convert_into_blocks(regions: list, block_size=1000):
+    """
+    Takes in a list of regions (x1, y1, x2, y2) and returns a list of regions (x1, y1, x2, y2)
+    formatted to fit into blocks of the specified block_size. Each returned region will correspond
+    to a block that covers part or all of the input region.
+
+    :param regions: List of tuples representing regions in the format (x1, y1, x2, y2)
+    :param block_size: Size of each block (width and height)
+    :return: List of tuples representing regions divided into blocks of the specified size
+    """
+    output_blocks = []
+
+    for (x1, y1, x2, y2) in regions:
+        start_block_x = x1 // block_size
+        end_block_x = (x2 - 1) // block_size
+
+        for bx in range(start_block_x, end_block_x + 1):
+            block_x1 = max(x1, bx * block_size)
+            block_y1 = y1  # max(y1, by * block_size)
+            block_x2 = min(x2, (bx + 1) * block_size)
+            block_y2 = y2  # min(y2, (by + 1) * block_size)
+
+            output_blocks.append((block_x1, block_y1, block_x2, block_y2))
+
+    return output_blocks
+
+
 # INFO: To search 27k regions in 20 minutes, each region, must take less than 44ms
 
 if __name__ == "__main__":

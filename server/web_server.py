@@ -99,6 +99,7 @@ class WebServer:
     def setup_routes(self):
         self.app.add_url_rule('/', view_func=self.home)
         self.app.add_url_rule('/account', view_func=self.account)
+        self.app.add_url_rule('/account_settings', view_func=self.account_settings)
 
         self.app.add_url_rule('/signup', view_func=self.signup, methods=['POST'])
         self.app.add_url_rule('/login', view_func=self.login, methods=['POST'])
@@ -128,6 +129,10 @@ class WebServer:
     @login_required
     def account(self):
         return self.serve_html("account")
+
+    @login_required
+    def account_settings(self):
+        return self.serve_html("my_account")
 
     def signup(self):
         result = create_account(request.form.get('email'), request.form.get('name'), request.form.get('password'))
@@ -190,7 +195,11 @@ class WebServer:
     @login_required
     def get_task(self, id):
         if self.does_user_own_task(current_user, id):
+            has_shared = request.args.get('share')
+            if has_shared and has_shared == "true":
+                return self.serve_html("share_me").replace('js_task_id = ""', f'js_task_id = "{id}"')
             return self.serve_html("task").replace('js_task_id = ""', f'js_task_id = "{id}"')
+
         return {}, 401
 
     @login_required
@@ -203,6 +212,9 @@ class WebServer:
     def serve_static_image(self, filename):
         if filename == "favicon.ico":
             return send_file("favicon.ico", mimetype='image/ico', as_attachment=True)
+
+        if os.path.exists(f"static/imgs/{filename}"):
+            return send_file(f"static/imgs/{filename}", mimetype='image/png', as_attachment=True)
 
         # Set the folder where your static files (e.g., images) are stored
         return send_file("generated_images/" + filename, mimetype='image/png', as_attachment=True)
@@ -223,13 +235,13 @@ class WebServer:
 
     @login_required
     def view_task_progress(self):  # Stream Data
-        if  self.does_user_own_task(current_user, request.args.get('id')):
+        if self.does_user_own_task(current_user, request.args.get('id')):
             return Response(self.stream_task_progress(request.args.get('id')),
                             content_type='text/event-stream')
         return {}, 401
 
     def run(self, debug=False):
-        ip = "192.168.1.120"
+        ip = "127.0.0.1"
 
         self.app.run(ip, debug=debug)
 

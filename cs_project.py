@@ -103,6 +103,8 @@ if __name__ == "__main__":
     net = main.Network(layout)
     #net = main.Network.load("ZF2.pyn")
 
+    net.save("ZF.pyn")
+
     error_data = []
     fig, axs = None, None
     print("go")

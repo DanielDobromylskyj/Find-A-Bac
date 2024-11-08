@@ -126,7 +126,9 @@ class Processor:
 
     @staticmethod
     def optimise(path):
-        return tissue_selector.convert_regions_to_horizontal_strips(tissue_selector.SelectTissue(path))
+        return tissue_selector.convert_into_blocks(
+            tissue_selector.convert_regions_to_horizontal_strips(tissue_selector.SelectTissue(path))
+        )
 
     def scan_regions(self):
         for i, (x1, y1, x2, y2) in enumerate(self.regions):
@@ -337,17 +339,20 @@ class Server:
                 "imagePaths": images,
                 "complete": False,
                 "x": self.processor.scan_location[0],
-                "y": self.processor.scan_location[1]
+                "y": self.processor.scan_location[1],
+                "scan_area": self.processor.current_region_index,
             }
 
-        else:  # todo - get data from db
-            return {  # for now, just return this to make testing happy
+        else:
+            results = self.get_old_results(task_id)
+            return {
                 "progress": 100,
-                "integerResult": -1,
-                "imagePaths": [],
+                "integerResult": results[0],
+                "imagePaths": self.load_images(task_id, results[1]),
                 "complete": True,
                 "x": 0,
-                "y": 0
+                "y": 0,
+                "scan_area": -1,
             }
 
     def full_cleanup(self):
@@ -364,6 +369,46 @@ class Server:
                 os.remove(path)
 
         self.clear_old_queue()
+
+    def load_images(self, task_id, locations):
+        slide = self.load_slide(f"uploads/{task_id}")
+
+        if not locations:
+            return []
+
+        images = []
+        for location in [eval(pos) for pos in locations.split("|")]:
+            img = slide.read_region(location, 0, (100, 100))
+            images.append(save_image(img))
+
+        return images
+
+    def get_old_results(self, job_id):
+        conn = sqlite3.connect('server.db')
+        cursor = conn.cursor()
+
+        cursor.execute('''
+        SELECT detections, locations FROM queue WHERE file_path == ?
+        ''', (job_id,))
+
+        results = cursor.fetchone()
+        conn.close()
+
+        return results
+
+    def save_results_to_db(self, job_id):
+        conn = sqlite3.connect('server.db')
+        cursor = conn.cursor()
+
+        cursor.execute('''UPDATE queue
+                          SET detections = ?, locations = ?
+                          WHERE file_path == ?;''',
+                       (self.processor.detections, "|".join([
+                                        str(detection_pos) for detection_pos in self.processor.get_images()
+                                    ]), job_id))
+
+        conn.commit()
+        conn.close()
 
     def start(self):
         self.loop_thread.start()
@@ -383,6 +428,7 @@ class Server:
                 scan_job = queue[0]
                 self.current_task = scan_job["id"]
                 self.processor.scan("uploads/" + scan_job["id"])
+                self.save_results_to_db(scan_job["id"])
                 self.increment_queue()
             else:
                 time.sleep(2)
