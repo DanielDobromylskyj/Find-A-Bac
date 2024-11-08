@@ -6,9 +6,10 @@ trainingPoints.txt
 /server/softwarerenderbackend
 /server/pixelengine
 *.db
-*.png
 *.pyn
 *.pyn
 *.pyc
 *.pyn
 server/queue_pos.txt
+/server/generated_images
+/server/uploads
