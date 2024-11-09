@@ -32,6 +32,11 @@
         .processing {
 
         }
+
+        .failed {
+            background-color: darkred;
+        }
+
         .in-queue {
             background-color: #6c757d;  /* Grey */
         }
@@ -226,6 +231,7 @@
     function getStatusText(posInQueue) {
         if (posInQueue === -1) return 'Done';
         if (posInQueue === -2) return 'Processing';
+        if (posInQueue === -3) return 'Failed';
         return `In queue (Position: ${posInQueue})`;
     }
 
@@ -233,6 +239,7 @@
     function getStatusClass(posInQueue) {
         if (posInQueue === -1) return 'done';
         if (posInQueue === -2) return 'processing';
+        if (posInQueue === -3) return 'failed';
         return 'in-queue';
     }
 

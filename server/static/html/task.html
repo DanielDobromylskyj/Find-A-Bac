@@ -222,6 +222,7 @@
     document.getElementById('share-link').href = "/task/share/" + js_task_id;
 
     let eventSource = null;
+    let has_ended = false;
     const addedImagePaths = new Set();
 
     const progressBar = document.getElementById("progress-bar")
@@ -242,6 +243,10 @@
 
     function fill_green_background(area) {
         ctx2.fillStyle = 'rgba(0, 255, 0, 0.5)';  // Light transparent green
+
+        if (!area) {
+            return;
+        }
 
         const x = area[0] / (1024 / canvas2.width);
         const y = area[1] / (1024 / canvas2.height);
@@ -277,14 +282,18 @@
             .then(response => {
                 if (response.processing === false) {
                     response.scan_areas.forEach((area) => {
-                        fill_green_background(area);
+                        if (area) {
+                            fill_green_background(area);
+                        }
                     });
                 } else {
                     let area_count = 0;
                     scan_areas = response.scan_areas;
                     response.scan_areas.forEach((area) => {
                         if (area_count < response.region_index) {
-                            fill_green_background(area);
+                            if (area) {
+                                fill_green_background(area);
+                            }
 
                             area_count++;
                             last_scan_region = area_count;
@@ -296,6 +305,10 @@
         if (img) {
             if (eventSource) {
                 eventSource.close();
+            }
+
+            if (has_ended) {
+                return;
             }
 
             eventSource = new EventSource(`view_task_progress?id=${js_task_id}`)
@@ -315,16 +328,16 @@
 
                 const imageGrid = document.getElementById('imageGrid');
                 for (const imagePath of result.imagePaths) {
-                    if (!addedImagePaths.has(imagePath[0])) {
+                    if (!addedImagePaths.has(imagePath)) {
                         const img_div = document.createElement('div');
                         img_div.className = "image-container";
 
                         const img1 = document.createElement('img');
-                        img1.src = imagePath[0];
+                        img1.src = "../" + imagePath[0];
                         img1.className = "first";
 
                         const img2 = document.createElement('img');
-                        img2.src = imagePath[1];
+                        img2.src = "../" + imagePath[1];
                         img2.className = "second";
 
                         img_div.appendChild(img1);
@@ -338,37 +351,38 @@
                 if (result.complete === true) {
                     eventSource.close();
                     eventSource.onmessage = {}
+                    has_ended = true;
                 }
             };
         }
+        }
+
+    //function drawGreenTrail() {
+    //  // Semi-transparent green fill
+    //  ctx2.fillStyle = 'rgba(0, 255, 0, 0.35)';  // Light transparent green
+    //  ctx2.fillRect(boxX / (1024 / canvas2.width), boxY / (1024 / canvas2.height), boxWidth, boxHeight);  // Draw filled trail box
+    //}
+
+    // Function to draw the red box (without leaving a trail)
+    function drawRedBox() {
+        ctx.clearRect(0, 0, canvas1.width, canvas1.height);
+        ctx.drawImage(img, 0, 0, canvas1.width, canvas1.height);  // Redraw the image
+
+        // Draw the red outline box on top
+        ctx.strokeStyle = 'red';  // Red box color
+        ctx.lineWidth = 2;
+        ctx.strokeRect(boxX / (1024 / canvas1.width), boxY / (1024 / canvas1.height), boxWidth / (1024 / canvas1.width), boxHeight / (1024 / canvas1.height));  // Draw the box
     }
 
-  //function drawGreenTrail() {
-  //  // Semi-transparent green fill
-  //  ctx2.fillStyle = 'rgba(0, 255, 0, 0.35)';  // Light transparent green
-  //  ctx2.fillRect(boxX / (1024 / canvas2.width), boxY / (1024 / canvas2.height), boxWidth, boxHeight);  // Draw filled trail box
-  //}
 
-  // Function to draw the red box (without leaving a trail)
-  function drawRedBox() {
-      ctx.clearRect(0, 0, canvas1.width, canvas1.height);
-      ctx.drawImage(img, 0, 0, canvas1.width, canvas1.height);  // Redraw the image
-
-      // Draw the red outline box on top
-      ctx.strokeStyle = 'red';  // Red box color
-      ctx.lineWidth = 2;
-      ctx.strokeRect(boxX / (1024 / canvas1.width), boxY / (1024 / canvas1.height), boxWidth / (1024 / canvas1.width), boxHeight / (1024 / canvas1.height));  // Draw the box
-  }
-
-
-function moveBox(newX, newY) {
-    boxX = newX;
-    boxY = newY;
-
-    drawRedBox();
-  }
-
-    load();
+    function moveBox(newX, newY) {
+        boxX = newX;
+        boxY = newY;
+        drawRedBox();
+    }
+    if (!has_ended) {
+        load();
+    }
 </script>
 </body>
 </html>

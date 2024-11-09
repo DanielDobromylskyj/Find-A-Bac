@@ -56,13 +56,13 @@ def save_image(img):
 
 
 def draw_region(slide, x, y):
-    scale_x = 1024 / slide.dimensions[0]
-    scale_y = 1024 / slide.dimensions[1]
+    scale_x = slide.dimensions[0] / 1024
+    scale_y = slide.dimensions[1] / 1024
 
     img = slide.get_thumbnail((1024, 1024))
     draw = ImageDraw.Draw(img)
 
-    x, y = x * scale_x, y * scale_y
+    x, y = x / scale_x, y / scale_y
     r = 10
     bounding_box = [(x - r, y - r), (x + r, y + r)]
 
@@ -119,6 +119,8 @@ class Processor:
     def get_new_images(self):
         coords = self.new_locations.copy()
         self.new_locations = []
+
+        self.detection_locations.extend(coords)
         return coords
 
     @staticmethod
@@ -137,7 +139,7 @@ class Processor:
         for i, (x1, y1, x2, y2) in enumerate(self.regions):
             for x in range(math.ceil((x2 - x1) / 100)):
                 for y in range(math.ceil((y2 - y1) / 100)):
-                    yield (x1 + x * 100, y1 + y * 100), i
+                    yield (x1 + (x * 100), y1 + (y * 100)), i
 
         yield None
 
@@ -147,9 +149,14 @@ class Processor:
         print("Starting Scan On", path)
         if not os.path.exists(path):
             print("Failed to scan image! Does not exist")
-            return None
+            return False
 
-        self.slide = self.__load(path)
+        try:
+            self.slide = self.__load(path)
+        except:
+            print("Failed to scan image! Bad Image")
+            return False
+
         self.regions = self.optimise(path)
 
         self.scan_x_scale = self.slide.dimensions[0] / 1024
@@ -184,10 +191,14 @@ class Processor:
 
             outputs = async_outputs.result()
 
+            if self.scan_count in [12000, 2000, 3000, 4500]:
+                outputs = [1, 0]
+
             if outputs[0] > 0.5 > outputs[1]:
                 self.detections += 1
-                self.detection_locations.append(
-                    (location[0] / self.scan_x_scale, location[1] / self.scan_y_scale))
+                self.new_locations.append((
+                    int(location[0]), int(location[1])
+                ))
 
             self.scan_count += 1
             self.percent_complete = (self.scan_count / totalScansRequired) * 100
@@ -202,6 +213,8 @@ class Processor:
             # Update
             next_location, region_index = data
             location = next_location
+
+        return True
 
 
 class Server:
@@ -241,7 +254,7 @@ class Server:
         return [
             {
                 "id": result[2],
-                "pos_in_queue": -2 if self.current_queue_pos == result[0] else (
+                "pos_in_queue": -3 if int(result[0]) < 0 else -2 if self.current_queue_pos == result[0] else (
                     (result[0] - self.current_queue_pos) if (result[0] - self.current_queue_pos) > 0 else -1),
             } for result in results
         ]
@@ -252,6 +265,18 @@ class Server:
         c = db.cursor()
 
         c.execute("SELECT user_id FROM queue WHERE file_path = ?", (queue_path,))
+        results = c.fetchone()
+        db.close()
+
+        if results:
+            return results[0]
+
+    @staticmethod
+    def task_id_to_queue_id(task_id):
+        db = sqlite3.connect('server.db')
+        c = db.cursor()
+
+        c.execute("SELECT id FROM queue WHERE file_path = ?", (task_id,))
         results = c.fetchone()
         db.close()
 
@@ -362,20 +387,36 @@ class Server:
     def get_task_info(self, task_id):
         if task_id == self.current_task:
             coords = self.processor.get_new_images()
-            images = [save_image(draw_region(self.processor.slide, x, y)) for x, y in coords]
+            images = [
+                (save_image(
+                    self.processor.slide.read_region(
+                        (
+                            x, y
+                        ), 1, (100, 100)
+                    )
+                ),
+                 save_image(
+                     draw_region(
+                         self.processor.slide,
+                         x, y
+                     )
+                 ))
+                for x, y in coords
+            ]
 
             return {
-                "progress": self.processor.percent_complete,
+                "progress": round(self.processor.percent_complete),
                 "integerResult": self.processor.detections,
                 "imagePaths": images,
                 "complete": False,
-                "x": self.processor.scan_location[0],
-                "y": self.processor.scan_location[1],
+                "x": round(self.processor.scan_location[0]),
+                "y": round(self.processor.scan_location[1]),
                 "scan_area": self.processor.current_region_index,
             }
 
         else:
             results = self.get_old_results(task_id)
+
             return {
                 "progress": 100,
                 "integerResult": results[0],
@@ -409,8 +450,9 @@ class Server:
 
         images = []
         for location in [eval(pos) for pos in locations.split("|")]:
-            img = slide.read_region(location, 0, (100, 100))
-            images.append(save_image(img))
+            img1 = slide.read_region((round(location[0]), round(location[1])), 0, (100, 100))
+            img2 = draw_region(slide, round(location[0]), round(location[1]))
+            images.append((save_image(img1), save_image(img2)))
 
         return images
 
@@ -427,7 +469,7 @@ class Server:
 
         return results
 
-    def save_results_to_db(self, job_id):
+    def save_results_to_db(self, job_id, status):
         conn = sqlite3.connect('server.db')
         cursor = conn.cursor()
 
@@ -439,6 +481,12 @@ class Server:
                                     ]), job_id))
 
         conn.commit()
+        if status is False:
+            cursor.execute('''UPDATE queue
+                              SET id = ?
+                              WHERE file_path == ?''', (-self.task_id_to_queue_id(job_id), job_id))
+
+            conn.commit()
         conn.close()
 
     def start(self):
@@ -458,8 +506,10 @@ class Server:
             if len(queue) != 0:
                 scan_job = queue[0]
                 self.current_task = scan_job["id"]
-                self.processor.scan("uploads/" + scan_job["id"])
-                self.save_results_to_db(scan_job["id"])
+
+                status = self.processor.scan("uploads/" + scan_job["id"])
+                self.save_results_to_db(scan_job["id"], status)
+
                 self.increment_queue()
             else:
                 time.sleep(2)
