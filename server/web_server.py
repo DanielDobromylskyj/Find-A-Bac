@@ -168,7 +168,7 @@ class WebServer:
                 file_id = str(uuid.uuid4())
                 extension = file.filename.split('.')[-1]
 
-                if extension == 'tif' or extension == 'tiff':
+                if extension == 'tif' or extension == 'tiff' or extension == 'isyntax':
                     file_path = os.path.join(UPLOAD_FOLDER, file_id + "." + extension)
                     file.save(file_path)  # Save the file
 
@@ -266,9 +266,10 @@ class WebServer:
         return {}, 401
 
     def run(self, debug=False):
-        ip = "127.0.0.1"
+        ip = "192.168.1.120"
+        port = 80
 
-        self.app.run(ip, debug=debug)
+        self.app.run(ip, port, debug=debug)
 
 
 if __name__ == "__main__":
