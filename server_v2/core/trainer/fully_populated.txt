@@ -1,0 +1,106 @@
+
+inline float sigmoid(float x) {
+    return 1.0f / (1.0f + exp(-x));
+}
+
+inline float derivative_sigmoid(float x) {
+    return sigmoid(x) * (1 - sigmoid(x));
+}
+
+inline float derivative_relu(float x) { // Could compress this function (optimise)
+    if (x > 0) {
+        return 1;
+    } else {
+        return 0.01; // Unsure what value this should be (between 0 and 1)
+    }
+}
+
+inline float clip(float value, float clip_value) {
+    if (value > clip_value) return clip_value;
+    if (value < -clip_value) return -clip_value;
+    return value;
+}
+
+__kernel void backward(__global float *input_error, __global float *weights, __global float *biases,
+                     __global float *output_error, __global float *input_values, __global float *output_values,
+                     __global float *weight_nudges, __global float *bias_nudges,
+                     int input_length, int output_length, int activation_type, float learning_rate) {
+
+    int node_in = get_global_id(0);
+    int node_out = get_global_id(1);
+
+    if (node_in >= input_length) {
+        printf("[FULL POP][TRAIN] Node In: %d Input Size: %d", node_in, input_length);
+    }
+
+    if (node_out >= output_length) {
+        printf("[FULL POP][TRAIN] Node Out: %d Output Size: %d", node_out, output_length);
+    }
+
+
+    float activated_value = output_values[node_out];
+
+    float derivative = 1;
+    switch (activation_type) {
+        case 1:
+            derivative = derivative_relu(activated_value);
+            break;
+        case 2:
+            derivative = derivative_sigmoid(activated_value);
+            break;
+        default:
+            derivative = 1;
+    }
+
+
+
+    float node_error = output_error[node_out];
+    float delta = node_error * derivative;
+
+    delta = clip(delta, 1.0); // Ensure it doesn't explode (hopefully)
+
+    float node_in_value = input_values[node_in];
+    float weight_delta = delta * node_in_value * learning_rate;
+
+    int weight_index = node_out * input_length + node_in;
+    weight_nudges[weight_index] = weight_delta;
+
+    if (weight_index > input_length * output_length) {
+        printf("[FULL POP][TRAIN] Weight Index: %d = %d * %d + %d > max: %d", weight_index, node_in, input_length, node_out, input_length * output_length);
+    }
+
+
+    float error_in_delta = delta * weights[weight_index] * learning_rate;
+    input_error[weight_index] = error_in_delta; // Yes, we use the weight_index here and we then sum them all later
+
+    //if (node_in == 0) { // Biases Updates
+    //    float bias_delta = delta * learning_rate;
+    //    biases[node_out] = bias_delta;
+    //}
+}
+
+
+__kernel void sum_input_errors(__global float *all_errors, __global float *summed_error, int input_size, int output_size) {
+    int input_node = get_global_id(0);
+
+    float local_sum = 0;
+    for (int output_node = 0; output_node < output_size; output_node++) {
+        int index = output_node * input_size + input_node;
+        local_sum += all_errors[index];
+
+        if (index > output_size* input_size) {
+            printf("[FULL POP][TRAIN] Sum Index: %d = %d * %d + %d > max %d", index, output_node, input_size, input_node, output_size * input_size);
+        }
+
+    }
+
+    if (input_node > input_size) {
+        printf("[FULL POP][TRAIN] input index: %d max: %d", input_node, input_size);
+    }
+
+    if (isnan(local_sum)) {
+        printf("[FULL POP][TRAIN] local sum is NaN! (input: %d)", input_node);
+    }
+
+    summed_error[input_node] = local_sum;
+}
