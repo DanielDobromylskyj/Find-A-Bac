@@ -21,9 +21,8 @@ def create_db(path, table_data):
     cursor = db.cursor()
 
     for table in table_data:
-        cursor.execute(f"CREATE TABLE {table['name']} ({', '.join([
-            f"{col} {datatype}" for col, datatype in table['args']
-        ])});")
+        data = (', '.join([(col + ' ' + datatype) for col, datatype in table['args']]))
+        cursor.execute(f"CREATE TABLE {table['name']} ({data});")
 
         db.commit()
 
@@ -80,7 +79,8 @@ class MyDB:
 
     def insert(self, table, param_names, param_data):
         cursor = Cursor(self)
-        cursor.execute(f"INSERT INTO {table} ({', '.join(param_names)}) VALUES ({", ".join(['?' for i in range(len(param_data))])})", param_data)
+        values = ", ".join(['?' for i in range(len(param_data))])
+        cursor.execute(f"INSERT INTO {table} ({', '.join(param_names)}) VALUES ({values})", param_data)
         cursor.close()
 
     def update(self, table, conditions, param_names, param_data):

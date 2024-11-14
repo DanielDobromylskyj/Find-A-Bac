@@ -1,0 +1,75 @@
+<style>
+        body {
+            font-family: Arial, sans-serif;
+            background-image: url("static/img/background_1.png");
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .queue-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            color: white;
+            cursor: pointer;
+            background-size: 100% 100%;  /* Set background size */
+            transition: background 0.3s ease; /* Smooth transition */
+        }
+        .done {
+            background-color: #28a745;  /* Green */
+        }
+        .processing {
+
+        }
+
+        .failed {
+            background-color: darkred;
+        }
+
+        .in-queue {
+            background-color: #6c757d;  /* Grey */
+        }
+        .queue-container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .queue-id {
+            font-weight: bold;
+        }
+        .queue-status {
+            font-style: italic;
+        }
+        .queue-item a {
+            color: inherit;
+            text-decoration: none;
+        }
+        .queue-item.disabled {
+            cursor: default;
+        }
+
+        .queue-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .reload-button {
+            padding: 10px 15px;
+            background-color: #17a2b8;
+            border: none;
+            color: white;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        .reload-button:hover {
+            background-color: #138496;
+        }
+    </style>

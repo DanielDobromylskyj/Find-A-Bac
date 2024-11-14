@@ -1,0 +1,99 @@
+ .file-upload-container {
+    max-width: 600px;
+    margin: 20px auto;
+    padding: 20px;
+    border: 1px solid #ccc;
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+.file-upload-container h2 {
+    margin-top: 0;
+    text-decoration: underline black;
+}
+.file-upload-container input[type="file"] {
+    display: block;
+    margin-bottom: 10px;
+}
+.file-upload-container button {
+    padding: 10px 15px;
+    background-color: #007bff;
+    border: none;
+    color: white;
+    cursor: pointer;
+    border-radius: 5px;
+}
+.file-upload-container button:hover {
+    background-color: #0056b3;
+}
+
+h1 {
+    text-align: center;
+}
+
+
+
+.queues {
+    display: flex;
+    gap: 10px;           /* Small gap between boxes */
+    padding: 0 10px;     /* Small gap on the left and right "walls" */
+    width: 100%;
+    padding-top: 10px;
+}
+
+.queue_display {
+    background-color: #fff;
+    border: 1px solid #ccc;
+    flex: 1;             /* Makes each box take equal space */
+    padding: 20px;
+    text-align: center;
+    border-radius: 10px;
+    height: 500px;
+}
+
+.queue-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 5px;
+    color: white;
+    cursor: pointer;
+    background-size: 100% 100%;  /* Set background size */
+    transition: background 0.3s ease; /* Smooth transition */
+    background-color: #6c757d;
+}
+
+.queue_display h2 {
+    margin-top: 0;
+    text-decoration: underline black;
+}
+
+.done {
+    background-color: #28a745;  /* Green */
+}
+.processing {
+
+}
+
+.failed {
+    background-color: darkred;
+}
+
+.in-queue {
+    background-color: #6c757d;  /* Grey */
+}
+
+.queue-id {
+    font-weight: bold;
+}
+.queue-status {
+    font-style: italic;
+}
+.queue-item a {
+    color: inherit;
+    text-decoration: none;
+}
+.queue-item.disabled {
+    cursor: default;
+}

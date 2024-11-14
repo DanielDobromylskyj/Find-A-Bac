@@ -396,8 +396,9 @@ class FilterLayer:
 
 
 class Network:
-    def __init__(self, net_layout: list):
+    def __init__(self, net_layout: list, device):
         self.layout = net_layout
+        self.device = device
 
     def forward_pass(self, inputs: np.ndarray, save_layer_data: bool = False):
         """ Forward pass through the Network """
@@ -493,8 +494,8 @@ class Network:
             f.write("\n".join([layer.serialize() + ":" + layer.__class__.__name__ for layer in self.layout]))
 
     @staticmethod
-    def load(path: str):
+    def load(path: str, device=None):
         """ Loads the network from a given path """
         with open(path, "r") as f:
             return Network(
-                [globals()[layer.split(":")[1]].deserialize(layer.split(":")[0]) for layer in f.read().split("\n")])
+                [globals()[layer.split(":")[1]].deserialize(layer.split(":")[0]) for layer in f.read().split("\n")], device)
