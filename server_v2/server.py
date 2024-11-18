@@ -16,17 +16,17 @@ class Server:
         self.processor_pool = ProcessorPool("../ZF.pyn")
 
     def enqueue_files(self, current_user, request):
-        for file in request.files.getlist('files'):
-            if file.filename != '':  # Check if there's a file selected
-                file_id = str(uuid.uuid4())
-                extension = file.filename.split('.')[-1]
+        file = request.files.get('file')
+        if file.filename != '':  # Check if there's a file selected
+            file_id = str(uuid.uuid4())
+            extension = file.filename.split('.')[-1]
 
-                if extension == 'tif' or extension == 'tiff' or extension == 'isyntax':
-                    file_path = os.path.join(UPLOAD_FOLDER, file_id + "." + extension)
-                    file.save(file_path)  # Save the file
+            if extension == 'tif' or extension == 'tiff' or extension == 'isyntax':
+                file_path = os.path.join(UPLOAD_FOLDER, file_id + "." + extension)
+                file.save(file_path)  # Save the file
 
-                    queue_item = QueueItem(file.filename, file_path, current_user.id)
-                    self.queue.enqueue(queue_item)
+                queue_item = QueueItem(file.filename, file_path, current_user.id)
+                self.queue.enqueue(queue_item)
 
         return {}, 200
 
@@ -42,6 +42,7 @@ class Server:
             if prc["complete"] is True:
                 self.store_queue_item(prc["queue_item"], prc["result"])
                 self.processor_pool.release_task(task_id)
+                return
 
     def start(self):
         self.web_interface.start_threaded()

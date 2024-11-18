@@ -4,41 +4,43 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Queue Status</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Roboto&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+
     <link rel="stylesheet" type="text/css" href="../css/global.css">
     <link rel="stylesheet" type="text/css" href="../css/dashboard.css">
 </head>
+
 <body>
 
-<h1>Queue Status</h1>
-
 <div class="file-upload-container">
-    <h2>Batch Upload Files</h2>
     <form id="uploadForm" action="/enqueue_files" method="POST" enctype="multipart/form-data">
-        <input type="file" name="files" id="fileInput" multiple required>
-        <button type="submit">Upload Files</button>
+        <div style="display: inline-flex; align-items: center;">
+            <i class="fa fa-upload" style="font-size: 1.5em; margin-right: 0.5em;"></i>
+            <h2 style="margin: 0;">Batch Upload Files</h2>
+        </div>
+
+        <ul id="fileList" class="file-list"></ul>
+
+        <div style="justify-content: center; align-content: center; text-align: center">
+            <input type="file" name="files" id="fileInput" multiple required>
+            <button type="button" class="upload-btn" onclick="triggerFileInput()">Choose Files</button>
+
+            <button type="button" class="upload-btn" onclick="uploadFiles()">Upload Files</button>
+        </div>
     </form>
 </div>
 
 <div class="queues">
     <div class="queue_display">
         <div class="queue-header">
-            <h2>Waiting</h2>
+            <h2 id="queue-header">Loading...</h2>
         </div>
-        <div id="queue-container1"></div>
-    </div>
-
-    <div class="queue_display">
-        <div class="queue-header">
-            <h2>Processing</h2>
-        </div>
-        <div id="queue-container2"></div>
-    </div>
-
-    <div class="queue_display">
-        <div class="queue-header">
-            <h2>Completed</h2>
-        </div>
-        <div id="queue-container3"></div>
+        <div id="queue-container"></div>
     </div>
 </div>
 
@@ -56,6 +58,82 @@
     let last_queue_wait = null;
     let last_queue_prc = null;
     let last_queue_done = null;
+
+    let current_queue = 0;
+
+    // Trigger file input click
+
+    const fileInput = document.getElementById('fileInput');
+    const fileList = document.getElementById('fileList');
+    let selectedFiles = [];
+
+    // Trigger file input click
+    function triggerFileInput() {
+      fileInput.click();
+    }
+
+    // Display selected files in a list
+    fileInput.addEventListener('change', () => {
+      fileList.innerHTML = ''; // Clear the list
+      selectedFiles = Array.from(fileInput.files); // Store selected files
+
+      selectedFiles.forEach((file, index) => {
+        const listItem = document.createElement('li');
+        listItem.id = `file-${index}`;
+        listItem.innerHTML = `
+          <span>${file.name}</span>
+          <span class="status">Pending</span>
+        `;
+        fileList.appendChild(listItem);
+      });
+    });
+
+    // Function to upload files one by one
+    async function uploadFiles() {
+      if (selectedFiles.length === 0) {
+        alert("Please choose files to upload.");
+        return;
+      }
+
+      for (let index = 0; index < selectedFiles.length; index++) {
+        const file = selectedFiles[index];
+        const listItem = document.getElementById(`file-${index}`);
+        const statusSpan = listItem.querySelector('.status');
+
+        // Update status to "Uploading..."
+        statusSpan.textContent = 'Uploading...';
+        statusSpan.classList.add('uploading');
+
+        // Create a new FormData object for this file
+        const formData = new FormData();
+        formData.append("file", file);
+
+        try {
+          // Send the file to the /enqueue_files endpoint via POST
+          const response = await fetch('/enqueue_files', {
+            method: 'POST',
+            body: formData
+          });
+
+          if (response.ok) {
+            // Update status to "Uploaded" if successful
+            statusSpan.textContent = 'Uploaded';
+            statusSpan.classList.remove('uploading');
+            statusSpan.classList.add('uploaded');
+          } else {
+            statusSpan.textContent = 'Failed to upload';
+            statusSpan.classList.remove('uploading');
+            statusSpan.classList.add('error');
+          }
+        } catch (error) {
+          console.error("Error uploading file:", error);
+          statusSpan.textContent = 'Error uploading';
+          statusSpan.classList.remove('uploading');
+          statusSpan.classList.add('error');
+        }
+      }
+      fileList.innerHTML = ''
+    }
 
     // Fetch the queue from the server
     async function fetchQueue() {
@@ -136,16 +214,15 @@
     });
 
     function renderWaitingQueue(queue) {
-        const container = document.getElementById("queue-container1")
+        document.getElementById("queue-header").innerText = "In Queue";
+        const container = document.getElementById("queue-container")
         container.innerHTML = '';  // Clear existing queue items
-
-        console.log(queue)
 
         queue.forEach(item => {
             const queueItemDiv = document.createElement('div');
             queueItemDiv.classList.add('queue-item', "queue-item");
 
-            queueItemDiv.innerHTML = `<span class="queue-id">${item[2]}</span> <span class="queue-status">Waiting</span>`;
+            queueItemDiv.innerHTML = `<span class="queue-id">${item[2]}</span>`;
             queueItemDiv.classList.add('disabled');  // Not clickable
 
             container.appendChild(queueItemDiv);
@@ -153,7 +230,8 @@
     }
 
     function renderProcessingQueue(queue) {
-        const container = document.getElementById("queue-container2")
+        document.getElementById("queue-header").innerText = "Processing";
+        const container = document.getElementById("queue-container")
         container.innerHTML = '';  // Clear existing queue items
 
         queue.forEach(item => {
@@ -162,7 +240,7 @@
 
             const link = document.createElement('a');
             link.href = `/task/${item[0]}`;
-            queueItemDiv.innerHTML = `<span class="queue-id">${item[0]}</span> <span class="queue-status">Processing </span>`;
+            queueItemDiv.innerHTML = `<span class="queue-id">${item[0]}</span>`;
             queueItemDiv.appendChild(link);
             updateProgress(queueItemDiv, item[1]);
 
@@ -171,16 +249,15 @@
     }
 
     function renderDoneQueue(queue) {
-        const container = document.getElementById("queue-container1")
+        document.getElementById("queue-header").innerText = "Complete";
+        const container = document.getElementById("queue-container")
         container.innerHTML = '';  // Clear existing queue items
-
-        console.log(queue)
 
         queue.forEach(item => {
             const queueItemDiv = document.createElement('div');
             queueItemDiv.classList.add('queue-item', "done");
 
-            queueItemDiv.innerHTML = `<span class="queue-id">${item[2]}</span> <span class="queue-status">Waiting</span>`;
+            queueItemDiv.innerHTML = `<span class="queue-id">${item[2]}</span> <span class="queue-status"> Waiting</span>`;
 
             container.appendChild(queueItemDiv);
         });
@@ -188,10 +265,16 @@
 
     async function reload_queue() {
         const data = await fetchQueue();
-
-        renderWaitingQueue(data[0]);
-        renderProcessingQueue(data[1]);
-        renderDoneQueue(data[2]);
+        console.log(current_queue)
+        if (current_queue === 0) {
+            renderWaitingQueue(data[0])
+        }
+        if (current_queue === 1) {
+            renderProcessingQueue(data[1])
+        }
+        if (current_queue === 2) {
+            renderDoneQueue(data[2])
+        }
     }
 
     setInterval(reload_queue, 1000);
