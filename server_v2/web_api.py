@@ -21,7 +21,7 @@ class WebInterface:
 
         self.user_manager = UserHandler()
         self.login_manager = LoginManager()
-        self.login_manager.unauthorized_callback = self.home
+        self.login_manager.unauthorized_callback = self.no_auth
         self.login_manager.user_loader(self.user_loader)
         self.login_manager.init_app(self.app)
 
@@ -48,6 +48,10 @@ class WebInterface:
     def serve_html(page):
         with open(f"static/html/{page}.html", 'r') as f:
             return f.read()
+
+    @staticmethod
+    def no_auth():
+        return redirect(url_for("home"))
 
     def home(self):
         return self.serve_html("index"), 200

@@ -34,6 +34,7 @@ class Server:
         self.processor_pool.run(queue_item, queue_item.queue_id)
 
     def store_queue_item(self, queue_item, result):
+        print("STORE", queue_item, result)
         self.queue.push_queue_item_to_storage(queue_item, result)
 
     def check_for_process_completions(self):

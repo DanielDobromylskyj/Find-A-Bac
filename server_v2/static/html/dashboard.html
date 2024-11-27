@@ -37,7 +37,15 @@
 
 <div class="queues">
     <div class="queue_display">
-        <div class="queue-header">
+        <div class="nav-container">
+            <div class="nav-section"><a class="nav-link" onclick="auto_view=false; current_queue=0">In Queue</a></div>
+            <div class="nav-divider"></div>
+            <div class="nav-section"><a class="nav-link" onclick="auto_view=false; current_queue=1">Processing</a></div>
+            <div class="nav-divider"></div>
+            <div class="nav-section"><a class="nav-link" onclick="auto_view=false; current_queue=2">Complete</a></div>
+        </div>
+
+        <div class="queue-header" style="margin-top: 10px;">
             <h2 id="queue-header">Loading...</h2>
         </div>
         <div id="queue-container"></div>
@@ -60,8 +68,8 @@
     let last_queue_done = null;
 
     let current_queue = 0;
+    let auto_view = true;
 
-    // Trigger file input click
 
     const fileInput = document.getElementById('fileInput');
     const fileList = document.getElementById('fileList');
@@ -138,8 +146,7 @@
     // Fetch the queue from the server
     async function fetchQueue() {
         const response = await fetch('/get_queue');
-        const queueData = await response.json();
-        return queueData;
+        return await response.json();
     }
 
     function compare_queue(queue1, queue2) {
@@ -151,7 +158,7 @@
             return false;
         }
 
-        if (queue1.length != queue2.length) {
+        if (queue1.length !== queue2.length) {
             return false;
         }
 
@@ -205,6 +212,7 @@
 
             if (response.ok) {
                 reload_queue();
+                auto_view = true; // Auto follow queues
             } else {
                 alert('Error uploading files');
             }
@@ -240,7 +248,7 @@
 
             const link = document.createElement('a');
             link.href = `/task/${item[0]}`;
-            queueItemDiv.innerHTML = `<span class="queue-id">${item[0]}</span>`;
+            link.innerHTML = `<span class="queue-id">${item[0]}</span>`;
             queueItemDiv.appendChild(link);
             updateProgress(queueItemDiv, item[1]);
 
@@ -265,7 +273,19 @@
 
     async function reload_queue() {
         const data = await fetchQueue();
-        console.log(current_queue)
+
+        if (auto_view) {
+            if ((data[1].length === 0) && (data[2].length === 0)) {
+                current_queue = 0; // If no data, go to waiting
+            }
+            if (data[1].length !== 0) {
+                current_queue = 1;
+            }
+            if (data[0].length === 0 && data[1].length === 0 && data[2].length !== 0) {
+                current_queue = 2;
+            }
+        }
+
         if (current_queue === 0) {
             renderWaitingQueue(data[0])
         }
