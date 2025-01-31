@@ -81,15 +81,18 @@ class MyDB:
         cursor = Cursor(self)
         values = ", ".join(['?' for i in range(len(param_data))])
         cursor.execute(f"INSERT INTO {table} ({', '.join(param_names)}) VALUES ({values})", param_data)
+        cursor.commit_to_db()
         cursor.close()
 
     def update(self, table, conditions, param_names, param_data):
         cursor = Cursor(self)
         cursor.execute(f"UPDATE {table} SET {' = ?, '.join(param_names)} = ? WHERE {conditions}", param_data)
+        cursor.commit_to_db()
         cursor.close()
 
     def delete(self, table, param_names, param_data):
         cursor = Cursor(self)
         cursor.execute(f"DELETE FROM {table} WHERE {param_names}", param_data)
+        cursor.commit_to_db()
         cursor.close()
 

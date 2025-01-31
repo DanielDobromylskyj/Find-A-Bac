@@ -1,5 +1,5 @@
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
-from flask import Flask, jsonify, request, redirect, url_for, send_file, Response
+from flask import Flask, jsonify, request, redirect, url_for, send_file, Response, abort
 from user import UserHandler
 import threading
 import os
@@ -28,6 +28,10 @@ class WebInterface:
     def setup_routes(self):
         self.app.add_url_rule('/', view_func=self.home)
         self.app.add_url_rule('/dashboard', view_func=self.dashboard)
+        self.app.add_url_rule('/task/<string:task_id>', view_func=self.load_task)
+        self.app.add_url_rule('/task/<string:task_id>/info', view_func=self.get_task_info)
+        self.app.add_url_rule('/task/<string:task_id>/heatmap', view_func=self.get_heatmap)
+        self.app.add_url_rule('/task/<string:task_id>/share', view_func=self.set_share_status)
 
         self.app.add_url_rule('/enqueue_files', view_func=self.enqueue_files, methods=['POST'])
         self.app.add_url_rule('/get_queue', view_func=self.get_queue)
@@ -105,11 +109,40 @@ class WebInterface:
 
         return {}, 404
 
+    def load_task(self, task_id):
+        task_details = self.server.queue.get_stored_task(current_user.id, task_id)
+
+        if task_details:
+            return self.serve_html("task_viewer")
+        return abort(403)
+
+    def get_task_info(self, task_id):
+        task_details = self.server.queue.get_stored_task(current_user.id, task_id)
+
+        if task_details:
+            return task_details, 200
+        return abort(403)
+
+    def get_heatmap(self, task_id):  # todo  - Make this check that it is shared OR you are the owner
+        full_static_image = f"heatmaps/{task_id}.png"
+
+        if os.path.exists(full_static_image):
+            return send_file(full_static_image, mimetype='image/png', as_attachment=True), 200
+
+        return {}, 404
+
+    def set_share_status(self, task_id):
+        result = self.server.queue.set_share_status(current_user.id, task_id, request.args.get('status'))
+
+        if result is True:
+            return {}, 200
+        return abort(403)
+
     def start_threaded(self):
         threading.Thread(target=self.run, daemon=True).start()
 
     def run(self, debug=False):
         ip = "127.0.0.1"
-        port = 80
+        port = 5000
 
         self.app.run(ip, port, debug=debug)

@@ -38,11 +38,11 @@
 <div class="queues">
     <div class="queue_display">
         <div class="nav-container">
-            <div class="nav-section"><a class="nav-link" onclick="auto_view=false; current_queue=0">In Queue</a></div>
+            <div class="nav-section"><a class="nav-link" onclick="auto_view=false; current_queue=0; reload_queue()">In Queue</a></div>
             <div class="nav-divider"></div>
-            <div class="nav-section"><a class="nav-link" onclick="auto_view=false; current_queue=1">Processing</a></div>
+            <div class="nav-section"><a class="nav-link" onclick="auto_view=false; current_queue=1; reload_queue()">Processing</a></div>
             <div class="nav-divider"></div>
-            <div class="nav-section"><a class="nav-link" onclick="auto_view=false; current_queue=2">Complete</a></div>
+            <div class="nav-section"><a class="nav-link" onclick="auto_view=false; current_queue=2; reload_queue()  ">Complete</a></div>
         </div>
 
         <div class="queue-header" style="margin-top: 10px;">
@@ -265,8 +265,8 @@
             const queueItemDiv = document.createElement('div');
             queueItemDiv.classList.add('queue-item', "done");
 
-            queueItemDiv.innerHTML = `<span class="queue-id">${item[2]}</span> <span class="queue-status"> Waiting</span>`;
-
+            queueItemDiv.innerHTML = `<span class="queue-id">${item[1]}</span> <span class="queue-status">.      ${item[2].length} detections</span>`;
+            queueItemDiv.onclick = function () {window.location.href = `/task/${item[0]}`}
             container.appendChild(queueItemDiv);
         });
     }

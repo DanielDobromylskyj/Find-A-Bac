@@ -1,4 +1,5 @@
 from db_manager import create_db, does_db_exist, MyDB
+import heat_map
 import uuid
 
 
@@ -16,7 +17,18 @@ class Queue:
         self.__task_storage = init_storage_db()
         self.__queue_db = []
 
+    @staticmethod
+    def parse_locations(data: str) -> list[tuple[int, int]]:
+        return [eval(point) for point in data.split("|")]
+
     def push_queue_item_to_storage(self, queue_item, processor_result):
+        locations = processor_result.detection_locations
+
+        if type(locations) is str:
+            locations = self.parse_locations(locations)
+
+        heat_map.generate_heatmap(queue_item.file_path, f"heatmaps/{queue_item.queue_id}.png", locations, (512, 512))
+
         self.__task_storage.insert(
             "completed_tasks",
             ("task_id", "task_display_name", "user_id", "file_path",
@@ -26,12 +38,60 @@ class Queue:
         )
 
     def get_stored_tasks(self, user_id):
-        return self.__task_storage.request(
+        return [(x[0], x[1], self.parse_locations(x[2]), x[3]) for x in self.__task_storage.request(
             "completed_tasks",
             "user_id = ?",
             "task_id, task_display_name, detection_locations, completion_status",
             (user_id,)
+        )]
+
+    def set_share_status(self, user_id, task_id, status):
+        data = self.__task_storage.request(
+            "completed_tasks",
+            "user_id = ? AND task_id = ?",
+            "task_id",
+            (user_id, task_id)
         )
+
+        if len(data) == 0:
+            return False
+
+        self.__task_storage.update(
+            "completed_tasks",
+            "task_id = ?",
+            ("share_status",),
+            (status, task_id),
+        )
+
+        return True
+
+    def get_stored_task(self, current_user_id, task_id):
+        data = self.__task_storage.request(
+            "completed_tasks",
+            "task_id = ?",
+            "task_id, task_display_name, user_id, file_path, detection_locations, completion_status, share_status",
+            (task_id,)
+        )
+
+        if len(data) == 0:
+            return
+
+        task_id, task_display_name, user_id, file_path, detection_locations, completion_status, share_status = data[0]
+
+        details = {
+            "task_id": task_id,
+            "display_name": task_display_name,
+            "file_path": file_path,
+            "detection_locations": detection_locations.split("|"),
+            "completion_status": completion_status,
+            "share_status": share_status
+        }
+
+        if current_user_id == user_id:
+            return details
+
+        elif share_status == 1:
+            return details
 
     def get_queued_tasks(self, user_id):
         return [

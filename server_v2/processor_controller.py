@@ -208,6 +208,26 @@ class ProcessorPool:
                     "result": None,
                 })
 
+        if self.total_max_networks == 0 and len(self.gpus) > 0:
+            print("\n[PROCESSOR][WARNING] Forcing Single GPU - Your GPU(s) may not be powerful enough")
+            gpu = self.gpus[0]
+
+            prc = Processor(network_path, gpu.device)
+            prc_uuid = str(uuid.uuid4())
+            gpu.set_network(prc.network)
+
+            self.processors.append({
+                "processor": prc,
+                "uuid": prc_uuid,
+                "in_use": False,
+                "complete": False,
+                "queue_item": None,
+                "result": None,
+            })
+
+        elif len(self.gpus) == 0:
+            raise Exception("no gpus detected")
+
         print(f"\n[PROCESSOR] Loaded GPU devices. Total Networks: {self.total_max_networks}")
 
     def __get_free_prc(self, task_id):
