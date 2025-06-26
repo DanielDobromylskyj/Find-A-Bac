@@ -1,288 +1,380 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Queue Status</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f7f7f7;
+        :root {
+            --primary-color: #4f46e5;
+            --secondary-color: #22c55e;
+            --danger-color: #dc2626;
+            --muted-color: #6b7280;
+            --light-bg: #f9fafb;
+            --dark-text: #111827;
+            --white: #ffffff;
+            --warning-color: #facc15;
+        }
+
+        * {
+            box-sizing: border-box;
             margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--light-bg);
+            color: var(--dark-text);
             padding: 20px;
         }
-        h1 {
-            text-align: center;
-            color: #333;
+
+        /* Hero section */
+        header.hero {
+            position: relative;
+            width: 100%;
+            height: 300px;
+            overflow: hidden;
+            margin-bottom: 40px;
         }
-        .queue-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 10px;
-            margin-bottom: 10px;
-            border-radius: 5px;
+
+        header.hero video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        header.hero h1 {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
             color: white;
-            cursor: pointer;
-            background-size: 100% 100%;  /* Set background size */
-            transition: background 0.3s ease; /* Smooth transition */
-        }
-        .done {
-            background-color: #28a745;  /* Green */
-        }
-        .processing {
-
+            font-size: 3rem;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.7);
+            z-index: 2;
         }
 
-        .failed {
-            background-color: darkred;
-        }
-
-        .in-queue {
-            background-color: #6c757d;  /* Grey */
-        }
-        .queue-container {
-            max-width: 600px;
+        /* Two-column layout wrapper */
+        .flex-wrapper {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            max-width: 1200px;
             margin: 0 auto;
+            padding: 0 10px;
         }
-        .queue-id {
-            font-weight: bold;
+
+        /* Upload and queue containers */
+        .file-upload-container,
+        .queue-container {
+            flex: 1 1 48%;
+            background-color: var(--white);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
         }
-        .queue-status {
-            font-style: italic;
-        }
-        .queue-item a {
-            color: inherit;
-            text-decoration: none;
-        }
-        .queue-item.disabled {
-            cursor: default;
-        }
-        .file-upload-container {
-            max-width: 600px;
-            margin: 20px auto;
-            padding: 20px;
-            border: 1px solid #ccc;
-            background-color: #fff;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }
+
+        /* Upload form styles */
         .file-upload-container h2 {
-            margin-top: 0;
+            margin-bottom: 16px;
+            font-size: 1.5rem;
         }
+
         .file-upload-container input[type="file"] {
             display: block;
-            margin-bottom: 10px;
+            margin-bottom: 12px;
         }
+
         .file-upload-container button {
             padding: 10px 15px;
-            background-color: #007bff;
+            background-color: var(--primary-color);
             border: none;
             color: white;
             cursor: pointer;
-            border-radius: 5px;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: background-color 0.3s ease;
         }
+
         .file-upload-container button:hover {
-            background-color: #0056b3;
+            background-color: #4338ca;
         }
+
+        /* Queue header */
         .queue-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 20px;
         }
+
+        .queue-header h2 {
+            font-size: 1.5rem;
+        }
+
         .reload-button {
             padding: 10px 15px;
             background-color: #17a2b8;
             border: none;
             color: white;
             cursor: pointer;
-            border-radius: 5px;
+            border-radius: 8px;
+            transition: background-color 0.3s ease;
         }
+
         .reload-button:hover {
             background-color: #138496;
         }
+
+        /* Queue item cards */
+        .queue-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 18px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            color: white;
+            background-size: 100% 100%;
+            transition: background 0.3s ease;
+        }
+
+        .queue-id {
+            font-weight: 600;
+        }
+
+        .queue-status {
+            font-style: italic;
+        }
+
+        .queue-item a {
+            color: inherit;
+            text-decoration: none;
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+        }
+
+        .queue-item.disabled {
+            cursor: default;
+            opacity: 0.85;
+        }
+
+        /* Status-based background colors */
+        .done {
+            background-color: var(--secondary-color);
+        }
+
+        .processing {
+            background-color: var(--warning-color);
+            /* fallback before progress gradient */
+        }
+
+        .failed {
+            background-color: var(--danger-color);
+        }
+
+        .in-queue {
+            background-color: var(--muted-color);
+        }
+
+        /* Responsive behavior */
+        @media (max-width: 768px) {
+
+            .file-upload-container,
+            .queue-container {
+                flex: 1 1 100%;
+            }
+        }
     </style>
 </head>
+
 <body>
 
-<h1>Queue Status</h1>
+    <h1>Queue Status</h1>
 
-<div class="file-upload-container">
-    <h2>Batch Upload Files</h2>
-    <form id="uploadForm" action="/enqueue_files" method="POST" enctype="multipart/form-data">
-        <input type="file" name="files" id="fileInput" multiple required>
-        <button type="submit">Upload Files</button>
-    </form>
-</div>
-
-<div class="queue-container">
-    <div class="queue-header">
-        <h2>Queue</h2>
-        <button id="reloadButton" class="reload-button">Reload Queue</button>
+    <div class="flex-wrapper">
+            <div class="file-upload-container">
+        <h2>Batch Upload Files</h2>
+        <form id="uploadForm" action="/enqueue_files" methods="POST" enctype="multipart/form-data">
+            <input type="file" name="files" id="fileInput" multiple required>
+            <button type="submit">Upload Files</button>
+        </form>
     </div>
-    <div id="queue-container">
-        <!-- Queue items will be inserted here by JavaScript -->
+
+    <div class="queue-container">
+        <div class="queue-header">
+            <h2>Queue</h2>
+            <button id="reloadButton" class="reload-button">Reload Queue</button>
+        </div>
+        <div id="queue-container">
+            <!-- Queue items will be inserted here by JavaScript -->
+        </div>
     </div>
-</div>
-<script>
-    let last_queue = null;
+    </div>
 
-    // Fetch the queue from the server
-    async function fetchQueue() {
-        const response = await fetch('/get_queue');
-        const queueData = await response.json();
-        return queueData;
-    }
+    <script>
+        let last_queue = null;
 
-    function compare_queue(queue1, queue2) {
-        if (!queue1) {
-            return false;
+        // Fetch the queue from the server
+        async function fetchQueue() {
+            const response = await fetch('/get_queue');
+            const queueData = await response.json();
+            return queueData;
         }
 
-        if (!queue2) {
-            return false;
-        }
-
-        if (queue1.length != queue2.length) {
-            return false;
-        }
-
-        for (let i = 0; i < queue1.length; i++) {
-            if (queue1[i].pos_in_queue !== queue2[i].pos_in_queue) {
+        function compare_queue(queue1, queue2) {
+            if (!queue1) {
                 return false;
             }
-        }
-        return true;
-    }
 
-    function renderQueue(queue) {
-        if (compare_queue(queue, last_queue) === false) {
-            const container = document.getElementById('queue-container');
-            container.innerHTML = '';  // Clear existing queue items
-
-            queue.forEach(item => {
-                const queueItemDiv = document.createElement('div');
-                const statusText = getStatusText(item.pos_in_queue);
-                queueItemDiv.classList.add('queue-item', getStatusClass(item.pos_in_queue));
-
-                if (item.pos_in_queue === -1) {
-                    // Task is done, make it clickable
-                    const link = document.createElement('a');
-                    link.href = `/task/${item.id}`;  // Redirect to the task page
-                    link.innerHTML = `<span class="queue-id">${item.id}</span> <span class="queue-status">${statusText}</span>`;
-                    queueItemDiv.appendChild(link);
-
-                } else if (item.pos_in_queue === -2) {
-                    // Currently Processing File
-                    const link = document.createElement('a');
-                    link.href = `/task/${item.id}`;  // Redirect to the task page
-                    link.innerHTML = `<span class="queue-id">${item.id}</span> <span class="queue-status">${statusText}</span>`;
-                    queueItemDiv.appendChild(link);
-                    fetchProgress(queueItemDiv, item.id);
-
-                } else {
-                    // In queue (not processing or done)
-                    queueItemDiv.innerHTML = `<span class="queue-id">${item.id}</span> <span class="queue-status">${statusText}</span>`;
-                    queueItemDiv.classList.add('disabled');  // Not clickable
-                }
-
-                container.appendChild(queueItemDiv);
-            });
-
-            last_queue = queue;
-        } else {
-            // update any currently processing ones
-            const items = document.getElementsByClassName("processing")
-            Array.from(items).forEach(item => {
-                fetchProgress(item, item.getElementsByClassName("queue-id")[0].innerHTML)
-            });
-        }
-    }
-
-    // Function to fetch progress and update the background for processing items
-    async function fetchProgress(queueItemDiv, itemId) {
-        try {
-            const response = await fetch('/get_process_info', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({id: itemId})
-            });
-
-            const data = await response.json();
-            const percentComplete = data.percent_complete;
-
-            // Update background color based on completion percentage
-            updateProgress(queueItemDiv, percentComplete);
-        } catch (error) {
-            console.error('Error fetching progress:', error);
-        }
-    }
-
-
-    // Function to update the progress of the item visually with a gradient
-    function updateProgress(queueItemDiv, percentComplete) {
-        const gradient = `linear-gradient(to right, #28a745 ${percentComplete}%, #ffc107 ${percentComplete}%)`;
-
-        // Apply the background gradient
-        queueItemDiv.style.background = gradient;
-    }
-
-    // Get the appropriate status text for the queue item
-    function getStatusText(posInQueue) {
-        if (posInQueue === -1) return 'Done';
-        if (posInQueue === -2) return 'Processing';
-        if (posInQueue === -3) return 'Failed';
-        return `In queue (Position: ${posInQueue})`;
-    }
-
-    // Get the appropriate class based on the queue position
-    function getStatusClass(posInQueue) {
-        if (posInQueue === -1) return 'done';
-        if (posInQueue === -2) return 'processing';
-        if (posInQueue === -3) return 'failed';
-        return 'in-queue';
-    }
-
-    // Fetch and render the queue on page load
-    fetchQueue().then(renderQueue);
-
-    // Handle form submission for file upload
-    const uploadForm = document.getElementById('uploadForm');
-    uploadForm.addEventListener('submit', async function (e) {
-        e.preventDefault();  // Prevent the form from submitting the default way
-
-        const formData = new FormData(uploadForm);
-
-        try {
-            const response = await fetch('/enqueue_files', {
-                method: 'POST',
-                body: formData
-            });
-
-            if (response.ok) {
-                // Re-fetch and render the queue after successful file upload
-                fetchQueue().then(renderQueue);
-            } else {
-                alert('Error uploading files');
+            if (!queue2) {
+                return false;
             }
-        } catch (error) {
-            console.error('Error:', error);
+
+            if (queue1.length != queue2.length) {
+                return false;
+            }
+
+            for (let i = 0; i < queue1.length; i++) {
+                if (queue1[i].pos_in_queue !== queue2[i].pos_in_queue) {
+                    return false;
+                }
+            }
+            return true;
         }
-    });
 
-    // Reload queue on button click
-    const reloadButton = document.getElementById('reloadButton');
-    reloadButton.addEventListener('click', function () {
+        function renderQueue(queue) {
+            if (compare_queue(queue, last_queue) === false) {
+                const container = document.getElementById('queue-container');
+                container.innerHTML = '';  // Clear existing queue items
+
+                queue.forEach(item => {
+                    const queueItemDiv = document.createElement('div');
+                    const statusText = getStatusText(item.pos_in_queue);
+                    queueItemDiv.classList.add('queue-item', getStatusClass(item.pos_in_queue));
+
+                    if (item.pos_in_queue === -1) {
+                        // Task is done, make it clickable
+                        const link = document.createElement('a');
+                        link.href = `/task/${item.id}`;  // Redirect to the task page
+                        link.innerHTML = `<span class="queue-id">${item.id}</span> <span class="queue-status">${statusText}</span>`;
+                        queueItemDiv.appendChild(link);
+
+                    } else if (item.pos_in_queue === -2) {
+                        // Currently Processing File
+                        const link = document.createElement('a');
+                        link.href = `/task/${item.id}`;  // Redirect to the task page
+                        link.innerHTML = `<span class="queue-id">${item.id}</span> <span class="queue-status">${statusText}</span>`;
+                        queueItemDiv.appendChild(link);
+                        fetchProgress(queueItemDiv, item.id);
+
+                    } else {
+                        // In queue (not processing or done)
+                        queueItemDiv.innerHTML = `<span class="queue-id">${item.id}</span> <span class="queue-status">${statusText}</span>`;
+                        queueItemDiv.classList.add('disabled');  // Not clickable
+                    }
+
+                    container.appendChild(queueItemDiv);
+                });
+
+                last_queue = queue;
+            } else {
+                // update any currently processing ones
+                const items = document.getElementsByClassName("processing")
+                Array.from(items).forEach(item => {
+                    fetchProgress(item, item.getElementsByClassName("queue-id")[0].innerHTML)
+                });
+            }
+        }
+
+        // Function to fetch progress and update the background for processing items
+        async function fetchProgress(queueItemDiv, itemId) {
+            try {
+                const response = await fetch('/get_process_info', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: itemId })
+                });
+
+                const data = await response.json();
+                const percentComplete = data.percent_complete;
+
+                // Update background color based on completion percentage
+                updateProgress(queueItemDiv, percentComplete);
+            } catch (error) {
+                console.error('Error fetching progress:', error);
+            }
+        }
+
+
+        // Function to update the progress of the item visually with a gradient
+        function updateProgress(queueItemDiv, percentComplete) {
+            const gradient = `linear-gradient(to right, #28a745 ${percentComplete}%, #ffc107 ${percentComplete}%)`;
+
+            // Apply the background gradient
+            queueItemDiv.style.background = gradient;
+        }
+
+        // Get the appropriate status text for the queue item
+        function getStatusText(posInQueue) {
+            if (posInQueue === -1) return 'Done';
+            if (posInQueue === -2) return 'Processing';
+            if (posInQueue === -3) return 'Failed';
+            return `In queue (Position: ${posInQueue})`;
+        }
+
+        // Get the appropriate class based on the queue position
+        function getStatusClass(posInQueue) {
+            if (posInQueue === -1) return 'done';
+            if (posInQueue === -2) return 'processing';
+            if (posInQueue === -3) return 'failed';
+            return 'in-queue';
+        }
+
+        // Fetch and render the queue on page load
         fetchQueue().then(renderQueue);
-    });
 
-    function reload_queue() {
-        fetchQueue().then(renderQueue);
-    }
+        // Handle form submission for file upload
+        const uploadForm = document.getElementById('uploadForm');
+        uploadForm.addEventListener('submit', async function (e) {
+            e.preventDefault();  // Prevent the form from submitting the default way
 
-    setInterval(reload_queue, 1000);
+            const formData = new FormData(uploadForm);
 
-</script>
+            try {
+                const response = await fetch('/enqueue_files', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    // Re-fetch and render the queue after successful file upload
+                    fetchQueue().then(renderQueue);
+                } else {
+                    alert('Error uploading files');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        });
+
+        // Reload queue on button click
+        const reloadButton = document.getElementById('reloadButton');
+        reloadButton.addEventListener('click', function () {
+            fetchQueue().then(renderQueue);
+        });
+
+        function reload_queue() {
+            fetchQueue().then(renderQueue);
+        }
+
+        setInterval(reload_queue, 1000);
+
+    </script>
 
 </body>
+
 </html>
