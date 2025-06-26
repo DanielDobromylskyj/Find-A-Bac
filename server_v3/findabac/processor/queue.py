@@ -1,0 +1,106 @@
+import os, time
+
+from .scan_item import ScanItem
+
+
+class Queue:
+    SCAN_PATH = "scans/"
+    STORAGE_AWAITING_PATH = "scans/awaiting/"
+
+    def __init__(self, openslide):
+        self.openslide = openslide
+
+        self.awaiting_queue = []
+        self.processing_queue = []
+
+        self.shutting_down = False
+        self.load_after_shutdown()
+
+
+    def move_to_processing(self, task_id):
+        task = self.get_task_by_id(task_id)
+
+        if task is None:
+            raise Exception("Task not found")
+
+        self.awaiting_queue.remove(task)
+        self.processing_queue.append(task)
+
+
+    def move_to_cold_storage(self, task_id):
+        task = self.get_task_by_id(task_id)
+
+        if task is None:
+            raise Exception("Task not found")
+
+        self.processing_queue.remove(task)
+
+        with open(os.path.join(Queue.SCAN_PATH, str(task_id)), "wb") as f:
+            f.write(task.to_bytes(archive=False))
+
+
+    def archive_task(self, task_id):
+        task = self.get_task_by_id(task_id)
+
+        if task is None:
+            raise Exception("Task not found")
+
+        with open(os.path.join(Queue.SCAN_PATH, str(task_id)), "wb") as f:
+            f.write(task.to_bytes(archive=True))
+
+
+    def get_task_by_id(self, task_id):
+        # Search HOT storage
+        for task in self.processing_queue:
+            if task.get_task_id() == task_id:
+                return task
+
+        # Search Warm Storage
+        for task in self.awaiting_queue:
+            if task.get_task_id() == task_id:
+                return task
+
+        # Search Cold Storage
+        if os.path.exists(os.path.join(Queue.SCAN_PATH, str(task_id))):
+            with open(os.path.join(Queue.SCAN_PATH, str(task_id)), "rb") as f:
+                file_bytes = f.read()
+
+            return ScanItem.from_bytes(self.openslide, file_bytes)
+
+
+    def enqueue_task(self, task):
+        if self.shutting_down:
+            return False
+
+        self.awaiting_queue.append(task)
+
+
+    def shutdown(self):
+        self.shutting_down = True
+
+        for task in self.awaiting_queue:
+            task_bytes = task.to_bytes()
+
+            with open(os.path.join(Queue.STORAGE_AWAITING_PATH, str(task.get_task_id())), "wb") as f:
+                f.write(task_bytes)
+
+        self.awaiting_queue = []
+
+        while len(self.processing_queue) > 0:
+            time.sleep(1)  # Await to finish processing current items before shutdown
+
+
+    def load_after_shutdown(self):
+        self.shutting_down = False
+
+        for file in os.listdir(Queue.STORAGE_AWAITING_PATH):
+            full_path = os.path.join(Queue.STORAGE_AWAITING_PATH, file)
+
+            with open(full_path, "rb") as f:
+                file_bytes = f.read()
+
+            task = ScanItem.from_bytes(self.openslide, file_bytes)
+            self.awaiting_queue.append(task)
+
+            os.remove(full_path)
+

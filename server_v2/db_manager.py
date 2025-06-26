@@ -86,6 +86,7 @@ class MyDB:
     def update(self, table, conditions, param_names, param_data):
         cursor = Cursor(self)
         cursor.execute(f"UPDATE {table} SET {' = ?, '.join(param_names)} = ? WHERE {conditions}", param_data)
+        cursor.commit_to_db()
         cursor.close()
 
     def delete(self, table, param_names, param_data):
