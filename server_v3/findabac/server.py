@@ -7,13 +7,6 @@ from flask import Flask, jsonify, request, redirect, url_for, send_file, Respons
 
 from .database import setup_database
 
-OPENSLIDE_PATH = os.path.abspath(r'openslide-win64\bin')
-if hasattr(os, 'add_dll_directory'):
-    with os.add_dll_directory(OPENSLIDE_PATH):
-        import openslide
-else:
-    import openslide
-
 
 class User(UserMixin):
     def __init__(self, user_id):

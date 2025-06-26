@@ -48,6 +48,20 @@ class Queue:
         with open(os.path.join(Queue.SCAN_PATH, str(task_id)), "wb") as f:
             f.write(task.to_bytes(archive=True))
 
+    def get_tasks_by_user(self, user_id):
+        tasks = []
+
+        for task in self.processing_queue:
+            if task.get_user_id() == user_id:
+                tasks.append(task)
+
+        for task in self.awaiting_queue:
+            if task.get_user_id() == user_id:
+                tasks.append(task)
+
+        return tasks
+
+    
 
     def get_task_by_id(self, task_id):
         # Search HOT storage

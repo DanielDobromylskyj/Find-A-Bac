@@ -10,11 +10,18 @@ class ScanItem:
         self.__path = path
         self.__user_id = user_id
         self.__task_id = task_id
+        self.__progress = 0
         self.__is_archived = is_archived
 
         if not is_archived:
             self.__openslide = openslide
             self.__slide = self.__openslide.open_slide(self.__path)
+
+    def set_progress(self, value):
+        self.__progress = value
+
+    def get_progress(self):
+        return self.__progress
 
     def get_task_id(self):
         return self.__task_id
