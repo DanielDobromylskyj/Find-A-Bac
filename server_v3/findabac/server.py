@@ -22,6 +22,7 @@ class User(UserMixin):
 
 package_root = files('findabac')
 
+
 class WebServer:
     def __init__(self):
         self.app = Flask(__name__)  # Initialize Flask
