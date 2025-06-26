@@ -1,8 +1,10 @@
 import pyopencl as cl
+import numpy as np
+import threading
 import math
+import uuid
 import sys
 import os
-
 
 OPENSLIDE_PATH = os.path.abspath(r'openslide-win64\bin')
 if hasattr(os, 'add_dll_directory'):
@@ -18,67 +20,18 @@ sys.path.insert(0, parent_dir)
 import main as neural_network
 # noinspection PyUnresolvedReferences
 import tissue_selector
+import gpu_info
 
 
-def get_gpu_memory():
-    platforms = cl.get_platforms()
-    for platform in platforms:
-        devices = platform.get_devices()
-        for device in devices:
-            return device.global_mem_size
-
-
-def multiply_list(x):
-    y = 1
-    for z in x:
-        y *= z
-    return y
-
-
-def approximate_network_memory_usage(net):  # what a mess of a function
-    all_totals = []
-    for layer in net.layout:
-        total_float32s = 0
-
-        if type(layer.weights) in [tuple, list]:
-            if hasattr(layer.weights[0], "size"):
-                total_float32s += layer.weights[0].size
-                total_float32s += layer.biases[0].size
-            else:
-                total_float32s += multiply_list(
-                    layer.weights[0].get_shape()
-                )
-
-                total_float32s += multiply_list(
-                    layer.biases[0].get_shape()
-                )
-        else:
-            if hasattr(layer.weights, "size"):
-                total_float32s += layer.weights.size
-                total_float32s += layer.biases.size
-            else:
-                total_float32s += multiply_list(
-                    layer.weights.get_shape()
-                )
-
-                total_float32s += multiply_list(
-                    layer.biases.get_shape()
-                )
-
-        if type(layer.input_size) in [tuple, list]:
-            total_float32s += multiply_list(layer.input_size) * 2
-        else:
-            total_float32s += layer.input_size * 2
-
-        all_totals.append(total_float32s)
-
-    return max(all_totals) * 4
+class Results:
+    def __init__(self, status, locations):
+        self.status = status
+        self.detection_locations = locations
 
 
 class Processor:
-    def __init__(self, network_path):
-        self.network = neural_network.Network.load(network_path)
-        self.approx_usage = approximate_network_memory_usage(self.network)
+    def __init__(self, network_path, device):
+        self.network = neural_network.Network.load(network_path, device)  # todo add device support
 
         self.scan_location = [0, 0]
         self.relative_scan_location = [0, 0]
@@ -124,8 +77,6 @@ class Processor:
     def get_new_images(self):
         coords = self.new_locations.copy()
         self.new_locations = []
-
-        self.detection_locations.extend(coords)
         return coords
 
     @staticmethod
@@ -205,6 +156,10 @@ class Processor:
                     int(location[0]), int(location[1])
                 ))
 
+                self.detection_locations.append((
+                    int(location[0]), int(location[1])
+                ))
+
             self.scan_count += 1
             self.percent_complete = (self.scan_count / totalScansRequired) * 100
             self.scan_location = [location[0] / self.scan_x_scale, location[1] / self.scan_y_scale]
@@ -224,12 +179,100 @@ class Processor:
 
 class ProcessorPool:
     def __init__(self, network_path):
-        self.total_memory = get_gpu_memory()
+        self.gpus = gpu_info.get_gpus()
+        self.processors = []
+        self.processor_tasks = {}
 
-        self.processor_memory = approximate_network_memory_usage(
-            Processor(network_path).network
-        )
+        self.total_max_networks = 0
+        self.total_running_networks = 0
 
-        self.total_processors = self.total_memory // self.processor_memory
+        print("[PROCESSOR] Getting Specs For GPUs")
+        for gpu in self.gpus:
+            prc = Processor(network_path, gpu.device)
+            prc_uuid = str(uuid.uuid4())
+            gpu.set_network(prc.network)
 
-        print(f"Loaded Processor Pool. Allowing {self.total_processors} Processors at once ({round(self.total_memory / (1024**3), 1)})")
+            max_networks = gpu.get_max_concurrent_networks()
+            print(f"\n>>> GPU '{gpu.get_name()}' <<<")
+            print("- Max Usage:", max_networks)
+            print("- Card UUID:", prc_uuid)
+
+            self.total_max_networks += max_networks
+            for i in range(max_networks):
+                self.processors.append({
+                    "processor": prc,
+                    "uuid": prc_uuid,
+                    "in_use": False,
+                    "complete": False,
+                    "queue_item": None,
+                    "result": None,
+                })
+
+        if self.total_max_networks == 0 and len(self.gpus) > 0:
+            print("\n[PROCESSOR][WARNING] Forcing Single GPU - Your GPU(s) may not be powerful enough")
+            gpu = self.gpus[0]
+
+            prc = Processor(network_path, gpu.device)
+            prc_uuid = str(uuid.uuid4())
+            gpu.set_network(prc.network)
+
+            self.processors.append({
+                "processor": prc,
+                "uuid": prc_uuid,
+                "in_use": False,
+                "complete": False,
+                "queue_item": None,
+                "result": None,
+            })
+
+        elif len(self.gpus) == 0:
+            raise Exception("no gpus detected")
+
+        print(f"\n[PROCESSOR] Loaded GPU devices. Total Networks: {self.total_max_networks}")
+
+    def __get_free_prc(self, task_id):
+        for i, prc in enumerate(self.processors):
+            if prc["in_use"] is False:
+                self.total_running_networks += 1
+                self.processor_tasks[task_id] = prc
+                prc["in_use"] = True
+                prc["complete"] = False
+                return self.processors[i], i
+
+    def __release_prc(self, task_id, prc):
+        for processor in self.processors:
+            if processor["uuid"] == prc["uuid"]:
+                self.total_running_networks -= 1
+                self.processor_tasks.pop(task_id)
+                processor["in_use"] = False
+
+    def _run(self, queue_item, task_id):
+        prc, i = self.__get_free_prc(task_id)
+        prc = self.processors[i]
+
+        processor = prc["processor"]
+        prc["queue_item"] = queue_item
+        result = processor.scan(queue_item.file_path)
+
+        if result is False:
+            prc["result"] = Results(-1, "")
+        else:
+            prc["result"] = Results(1, "|".join([str(pos) for pos in processor.detection_locations]))
+
+        prc["complete"] = True
+
+    def release_task(self, task_id):
+        self.__release_prc(task_id, self.processor_tasks[task_id])
+
+    def get_processor(self, task_id):
+        if task_id in self.processor_tasks:
+            return self.processor_tasks[task_id]
+
+    def is_free_processors(self):
+        return self.total_running_networks != self.total_max_networks
+
+    def run(self, queue_item, task_id):
+        if self.is_free_processors() is False:
+            raise Exception("No free prc")
+
+        threading.Thread(target=self._run, args=(queue_item, task_id), daemon=True).start()

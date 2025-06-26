@@ -4,134 +4,149 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Queue Status</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f7f7f7;
-            margin: 0;
-            padding: 20px;
-        }
-        h1 {
-            text-align: center;
-            color: #333;
-        }
-        .queue-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 10px;
-            margin-bottom: 10px;
-            border-radius: 5px;
-            color: white;
-            cursor: pointer;
-            background-size: 100% 100%;  /* Set background size */
-            transition: background 0.3s ease; /* Smooth transition */
-        }
-        .done {
-            background-color: #28a745;  /* Green */
-        }
-        .processing {
 
-        }
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Roboto&display=swap" rel="stylesheet">
 
-        .failed {
-            background-color: darkred;
-        }
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
 
-        .in-queue {
-            background-color: #6c757d;  /* Grey */
-        }
-        .queue-container {
-            max-width: 600px;
-            margin: 0 auto;
-        }
-        .queue-id {
-            font-weight: bold;
-        }
-        .queue-status {
-            font-style: italic;
-        }
-        .queue-item a {
-            color: inherit;
-            text-decoration: none;
-        }
-        .queue-item.disabled {
-            cursor: default;
-        }
-        .file-upload-container {
-            max-width: 600px;
-            margin: 20px auto;
-            padding: 20px;
-            border: 1px solid #ccc;
-            background-color: #fff;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }
-        .file-upload-container h2 {
-            margin-top: 0;
-        }
-        .file-upload-container input[type="file"] {
-            display: block;
-            margin-bottom: 10px;
-        }
-        .file-upload-container button {
-            padding: 10px 15px;
-            background-color: #007bff;
-            border: none;
-            color: white;
-            cursor: pointer;
-            border-radius: 5px;
-        }
-        .file-upload-container button:hover {
-            background-color: #0056b3;
-        }
-        .queue-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-        .reload-button {
-            padding: 10px 15px;
-            background-color: #17a2b8;
-            border: none;
-            color: white;
-            cursor: pointer;
-            border-radius: 5px;
-        }
-        .reload-button:hover {
-            background-color: #138496;
-        }
-    </style>
+    <link rel="stylesheet" type="text/css" href="../css/global.css">
+    <link rel="stylesheet" type="text/css" href="../css/dashboard.css">
 </head>
+
 <body>
 
-<h1>Queue Status</h1>
-
 <div class="file-upload-container">
-    <h2>Batch Upload Files</h2>
     <form id="uploadForm" action="/enqueue_files" method="POST" enctype="multipart/form-data">
-        <input type="file" name="files" id="fileInput" multiple required>
-        <button type="submit">Upload Files</button>
+        <div style="display: inline-flex; align-items: center;">
+            <i class="fa fa-upload" style="font-size: 1.5em; margin-right: 0.5em;"></i>
+            <h2 style="margin: 0;">Batch Upload Files</h2>
+        </div>
+
+        <ul id="fileList" class="file-list"></ul>
+
+        <div style="justify-content: center; align-content: center; text-align: center">
+            <input type="file" name="files" id="fileInput" multiple required>
+            <button type="button" class="upload-btn" onclick="triggerFileInput()">Choose Files</button>
+
+            <button type="button" class="upload-btn" onclick="uploadFiles()">Upload Files</button>
+        </div>
     </form>
 </div>
 
-<div class="queue-container">
+<div class="queues">
+    <div class="queue_display">
+        <div class="nav-container">
+            <div class="nav-section"><a class="nav-link" onclick="auto_view=false; current_queue=0; reload_queue()">In Queue</a></div>
+            <div class="nav-divider"></div>
+            <div class="nav-section"><a class="nav-link" onclick="auto_view=false; current_queue=1; reload_queue()">Processing</a></div>
+            <div class="nav-divider"></div>
+            <div class="nav-section"><a class="nav-link" onclick="auto_view=false; current_queue=2; reload_queue()  ">Complete</a></div>
+        </div>
+
+        <div class="queue-header" style="margin-top: 10px;">
+            <h2 id="queue-header">Loading...</h2>
+        </div>
+        <div id="queue-container"></div>
+    </div>
+</div>
+
+<!-- <div class="queue-container">
     <div class="queue-header">
         <h2>Queue</h2>
         <button id="reloadButton" class="reload-button">Reload Queue</button>
     </div>
     <div id="queue-container">
-        <!-- Queue items will be inserted here by JavaScript -->
+
     </div>
-</div>
+</div> -->
+
 <script>
-    let last_queue = null;
+    let last_queue_wait = null;
+    let last_queue_prc = null;
+    let last_queue_done = null;
+
+    let current_queue = 0;
+    let auto_view = true;
+
+
+    const fileInput = document.getElementById('fileInput');
+    const fileList = document.getElementById('fileList');
+    let selectedFiles = [];
+
+    // Trigger file input click
+    function triggerFileInput() {
+      fileInput.click();
+    }
+
+    // Display selected files in a list
+    fileInput.addEventListener('change', () => {
+      fileList.innerHTML = ''; // Clear the list
+      selectedFiles = Array.from(fileInput.files); // Store selected files
+
+      selectedFiles.forEach((file, index) => {
+        const listItem = document.createElement('li');
+        listItem.id = `file-${index}`;
+        listItem.innerHTML = `
+          <span>${file.name}</span>
+          <span class="status">Pending</span>
+        `;
+        fileList.appendChild(listItem);
+      });
+    });
+
+    // Function to upload files one by one
+    async function uploadFiles() {
+      if (selectedFiles.length === 0) {
+        alert("Please choose files to upload.");
+        return;
+      }
+
+      for (let index = 0; index < selectedFiles.length; index++) {
+        const file = selectedFiles[index];
+        const listItem = document.getElementById(`file-${index}`);
+        const statusSpan = listItem.querySelector('.status');
+
+        // Update status to "Uploading..."
+        statusSpan.textContent = 'Uploading...';
+        statusSpan.classList.add('uploading');
+
+        // Create a new FormData object for this file
+        const formData = new FormData();
+        formData.append("file", file);
+
+        try {
+          // Send the file to the /enqueue_files endpoint via POST
+          const response = await fetch('/enqueue_files', {
+            method: 'POST',
+            body: formData
+          });
+
+          if (response.ok) {
+            // Update status to "Uploaded" if successful
+            statusSpan.textContent = 'Uploaded';
+            statusSpan.classList.remove('uploading');
+            statusSpan.classList.add('uploaded');
+          } else {
+            statusSpan.textContent = 'Failed to upload';
+            statusSpan.classList.remove('uploading');
+            statusSpan.classList.add('error');
+          }
+        } catch (error) {
+          console.error("Error uploading file:", error);
+          statusSpan.textContent = 'Error uploading';
+          statusSpan.classList.remove('uploading');
+          statusSpan.classList.add('error');
+        }
+      }
+      fileList.innerHTML = ''
+    }
 
     // Fetch the queue from the server
     async function fetchQueue() {
         const response = await fetch('/get_queue');
-        const queueData = await response.json();
-        return queueData;
+        return await response.json();
     }
 
     function compare_queue(queue1, queue2) {
@@ -143,7 +158,7 @@
             return false;
         }
 
-        if (queue1.length != queue2.length) {
+        if (queue1.length !== queue2.length) {
             return false;
         }
 
@@ -155,51 +170,6 @@
         return true;
     }
 
-    function renderQueue(queue) {
-        if (compare_queue(queue, last_queue) === false) {
-            const container = document.getElementById('queue-container');
-            container.innerHTML = '';  // Clear existing queue items
-
-            queue.forEach(item => {
-                const queueItemDiv = document.createElement('div');
-                const statusText = getStatusText(item.pos_in_queue);
-                queueItemDiv.classList.add('queue-item', getStatusClass(item.pos_in_queue));
-
-                if (item.pos_in_queue === -1) {
-                    // Task is done, make it clickable
-                    const link = document.createElement('a');
-                    link.href = `/task/${item.id}`;  // Redirect to the task page
-                    link.innerHTML = `<span class="queue-id">${item.id}</span> <span class="queue-status">${statusText}</span>`;
-                    queueItemDiv.appendChild(link);
-
-                } else if (item.pos_in_queue === -2) {
-                    // Currently Processing File
-                    const link = document.createElement('a');
-                    link.href = `/task/${item.id}`;  // Redirect to the task page
-                    link.innerHTML = `<span class="queue-id">${item.id}</span> <span class="queue-status">${statusText}</span>`;
-                    queueItemDiv.appendChild(link);
-                    fetchProgress(queueItemDiv, item.id);
-
-                } else {
-                    // In queue (not processing or done)
-                    queueItemDiv.innerHTML = `<span class="queue-id">${item.id}</span> <span class="queue-status">${statusText}</span>`;
-                    queueItemDiv.classList.add('disabled');  // Not clickable
-                }
-
-                container.appendChild(queueItemDiv);
-            });
-
-            last_queue = queue;
-        } else {
-            // update any currently processing ones
-            const items = document.getElementsByClassName("processing")
-            Array.from(items).forEach(item => {
-                fetchProgress(item, item.getElementsByClassName("queue-id")[0].innerHTML)
-            });
-        }
-    }
-
-    // Function to fetch progress and update the background for processing items
     async function fetchProgress(queueItemDiv, itemId) {
         try {
             const response = await fetch('/get_process_info', {
@@ -227,25 +197,6 @@
         queueItemDiv.style.background = gradient;
     }
 
-    // Get the appropriate status text for the queue item
-    function getStatusText(posInQueue) {
-        if (posInQueue === -1) return 'Done';
-        if (posInQueue === -2) return 'Processing';
-        if (posInQueue === -3) return 'Failed';
-        return `In queue (Position: ${posInQueue})`;
-    }
-
-    // Get the appropriate class based on the queue position
-    function getStatusClass(posInQueue) {
-        if (posInQueue === -1) return 'done';
-        if (posInQueue === -2) return 'processing';
-        if (posInQueue === -3) return 'failed';
-        return 'in-queue';
-    }
-
-    // Fetch and render the queue on page load
-    fetchQueue().then(renderQueue);
-
     // Handle form submission for file upload
     const uploadForm = document.getElementById('uploadForm');
     uploadForm.addEventListener('submit', async function (e) {
@@ -260,8 +211,8 @@
             });
 
             if (response.ok) {
-                // Re-fetch and render the queue after successful file upload
-                fetchQueue().then(renderQueue);
+                reload_queue();
+                auto_view = true; // Auto follow queues
             } else {
                 alert('Error uploading files');
             }
@@ -270,14 +221,80 @@
         }
     });
 
-    // Reload queue on button click
-    const reloadButton = document.getElementById('reloadButton');
-    reloadButton.addEventListener('click', function () {
-        fetchQueue().then(renderQueue);
-    });
+    function renderWaitingQueue(queue) {
+        document.getElementById("queue-header").innerText = "In Queue";
+        const container = document.getElementById("queue-container")
+        container.innerHTML = '';  // Clear existing queue items
 
-    function reload_queue() {
-        fetchQueue().then(renderQueue);
+        queue.forEach(item => {
+            const queueItemDiv = document.createElement('div');
+            queueItemDiv.classList.add('queue-item', "queue-item");
+
+            queueItemDiv.innerHTML = `<span class="queue-id">${item[2]}</span>`;
+            queueItemDiv.classList.add('disabled');  // Not clickable
+
+            container.appendChild(queueItemDiv);
+        });
+    }
+
+    function renderProcessingQueue(queue) {
+        document.getElementById("queue-header").innerText = "Processing";
+        const container = document.getElementById("queue-container")
+        container.innerHTML = '';  // Clear existing queue items
+
+        queue.forEach(item => {
+            const queueItemDiv = document.createElement('div');
+            queueItemDiv.classList.add('queue-item', "processing");
+
+            const link = document.createElement('a');
+            link.href = `/task/${item[0]}`;
+            link.innerHTML = `<span class="queue-id">${item[0]}</span>`;
+            queueItemDiv.appendChild(link);
+            updateProgress(queueItemDiv, item[1]);
+
+            container.appendChild(queueItemDiv);
+        });
+    }
+
+    function renderDoneQueue(queue) {
+        document.getElementById("queue-header").innerText = "Complete";
+        const container = document.getElementById("queue-container")
+        container.innerHTML = '';  // Clear existing queue items
+
+        queue.forEach(item => {
+            const queueItemDiv = document.createElement('div');
+            queueItemDiv.classList.add('queue-item', "done");
+
+            queueItemDiv.innerHTML = `<span class="queue-id">${item[1]}</span> <span class="queue-status">.      ${item[2].length} detections</span>`;
+            queueItemDiv.onclick = function () {window.location.href = `/task/${item[0]}`}
+            container.appendChild(queueItemDiv);
+        });
+    }
+
+    async function reload_queue() {
+        const data = await fetchQueue();
+
+        if (auto_view) {
+            if ((data[1].length === 0) && (data[2].length === 0)) {
+                current_queue = 0; // If no data, go to waiting
+            }
+            if (data[1].length !== 0) {
+                current_queue = 1;
+            }
+            if (data[0].length === 0 && data[1].length === 0 && data[2].length !== 0) {
+                current_queue = 2;
+            }
+        }
+
+        if (current_queue === 0) {
+            renderWaitingQueue(data[0])
+        }
+        if (current_queue === 1) {
+            renderProcessingQueue(data[1])
+        }
+        if (current_queue === 2) {
+            renderDoneQueue(data[2])
+        }
     }
 
     setInterval(reload_queue, 1000);

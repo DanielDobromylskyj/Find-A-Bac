@@ -1,0 +1,197 @@
+ .file-upload-container {
+     max-width: 600px;
+     margin: 20px auto;
+     padding: 20px;
+     border: 1px solid #ccc;
+     background-color: #fff;
+     border-radius: 10px;
+     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+
+     text-align: center;
+     align-content: center;
+     justify-content: center;
+}
+.file-upload-container h2 {
+    margin-top: 0;
+    font-family: "Inter", sans-serif;
+    font-optical-sizing: auto;
+    font-weight: normal;
+    font-style: normal;
+}
+.file-upload-container input[type="file"] {
+    display: block;
+    margin-bottom: 10px;
+}
+.file-upload-container button {
+    padding: 10px 15px;
+    border-color: dodgerblue;
+    color: dodgerblue;
+    cursor: pointer;
+    border-radius: 5px;
+}
+.file-upload-container button:hover {
+    background-color: dodgerblue;
+    color: white;
+}
+
+.file-upload-container label {
+    padding: 8px 12px; /* Smaller padding for a smaller button */
+    border: 1px solid dodgerblue;
+    color: dodgerblue;
+    cursor: pointer;
+    border-radius: 5px;
+    display: inline-block;
+}
+
+/* Hover effect for the label */
+.file-upload-container label:hover {
+  background-color: dodgerblue;
+  color: white;
+}
+
+.file-list {
+  list-style-type: none;
+  padding: 0;
+  margin-bottom: 20px;
+  color: #333;
+}
+
+.file-list li {
+  display: flex;
+  justify-content: space-between;
+  padding: 5px;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  margin-bottom: 5px;
+}
+
+h1 {
+    text-align: center;
+}
+
+#uploadForm {
+    padding-top: 10px
+}
+
+#fileInput {
+    display: none;
+}
+
+
+.queues {
+    display: flex;
+    gap: 10px;           /* Small gap between boxes */
+    margin: 10px;
+    width: auto;
+    padding-top: 10px;
+
+        text-align: center;
+    align-content: center;
+    justify-content: center;
+
+}
+
+.queue_display {
+    background-color: #fff;
+    border: 1px solid #ccc;
+    width: 50%;
+    padding: 0;
+    margin: 20px auto;
+    text-align: center;
+    border-radius: 10px;
+    height: 500px;
+}
+
+.queue-item {
+    padding: 10px;
+    margin: 10px;
+    margin-bottom: 12px;
+    border-radius: 5px;
+    color: white;
+    cursor: pointer;
+    background-size: 100% 100%;  /* Set background size */
+    transition: background 0.3s ease; /* Smooth transition */
+    background-color: #6c757d;
+
+    display: flex;
+    justify-content: space-between;
+    width: calc(100% - 40px); /* or any width that fits your layout */
+
+    text-align: center;
+    align-content: center;
+    justify-content: center;
+}
+
+.queue_display h2 {
+    margin-top: 0;
+    text-decoration: underline black;
+}
+
+.done {
+    background-color: #28a745;  /* Green */
+}
+
+.processing {
+
+}
+
+.failed {
+    background-color: darkred;
+}
+
+.in-queue {
+    background-color: #6c757d;  /* Grey */
+}
+
+.queue-id {
+    font-weight: bold;
+}
+.queue-status {
+    font-style: italic;
+}
+.queue-item a {
+    color: inherit;
+    text-decoration: none;
+}
+.queue-item.disabled {
+    cursor: default;
+}
+
+
+.nav-container {
+    width: 100%;
+    background-color: whitesmoke; /* Light background */
+    overflow: hidden;
+    padding: 10px 0;
+    margin: 0;
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+    display: flex; /* Use flexbox for layout */
+    align-items: center;
+    justify-content: center;
+}
+
+/* Styling each section */
+.nav-section {
+    flex: 1; /* Equal width for each section */
+    text-align: center; /* Center-align the text/link inside */
+
+    user-select: none; /* Prevent text selection */
+}
+
+/* Styling the links */
+.nav-link {
+    color: #444; /* Darker text color */
+    text-decoration: none;
+    padding: 10px 0;
+    display: block; /* Full height clickable */
+    font-size: 16px;
+    font-weight: bold;
+}
+
+/* Divider between sections */
+.nav-divider {
+    width: 1px;
+    background-color: black; /* Light gray divider */
+    height: 30px; /* Full height of the container */
+}

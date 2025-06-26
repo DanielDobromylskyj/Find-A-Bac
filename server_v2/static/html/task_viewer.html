@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Viewing Task...</title>
+
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Roboto&display=swap" rel="stylesheet">
+
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+
+        <link rel="stylesheet" type="text/css" href="../css/global.css">
+        <link rel="stylesheet" type="text/css" href="../css/task_viewer.css">
+    </head>
+
+    <body>
+        <div id="task-title" class="background-box">
+            <h1 id="task-title-h1">Viewer loading</h1>
+            <p id="title-error"></p>
+        </div>
+        <div id="task-visualizer" class="background-box">
+            <h2>Output Heatmap</h2>
+            <img id="task-image" src="" alt="Task Heatmap">
+        </div>
+
+        <div id="task-info" class="background-box">
+            <h2>Information</h2>
+            <p id="info-status">Status: (loading)</p>
+            <p id="info-detection-count">Detections: (loading)</p>
+            <p id="info-task-id">Task ID: (loading)</p>
+        </div>
+
+        <div id="task-share" class="background-box">
+            <h2>Share Status</h2>
+            <p id="share-status">Shared: (loading)</p>
+            <button id="toggle-share-status" onclick="toggle_share_status()">(loading)</button>
+        </div>
+
+
+        <script>
+            const split_url = document.URL.split("/");
+            const task_id = split_url[split_url.length - 1];
+            let loaded = false;
+            let shared = false;
+
+
+            function toggle_share_status() {
+                if (loaded) {
+                    let status = 1;
+                    if (shared === 1) {status = 0}
+
+                    fetch(document.URL + "/share?status=" + status)
+
+                    setTimeout(function () {load()}, 500);
+                }
+
+
+            }
+
+            function load() {
+                document.getElementById("task-title-h1").innerText = task_id;
+
+                fetch(document.URL + "/info").then(response => response.json()).then(data => {
+                    document.getElementById("task-title-h1").innerText = data.display_name;
+
+                    if (data.completion_status === 1) {
+                        document.getElementById("info-status").innerText = "Status: Complete";
+                    } else {
+                        document.getElementById("info-status").innerText = "Status: Incomplete";
+                    }
+
+                    document.getElementById("info-detection-count").innerText = "Detections: " + data.detection_locations.length;
+                    document.getElementById("info-task-id").innerText = "Task ID: " + data.task_id;
+
+                    document.getElementById("task-image").src = document.URL + "/heatmap";
+                    document.getElementById("task-image").style.display = "block";
+
+                    shared = data.share_status;
+
+                    if (shared === 1) {
+                        document.getElementById("share-status").innerText = "Shared: True";
+                        document.getElementById("toggle-share-status").innerText = "Unshare";
+                    } else {
+                        document.getElementById("share-status").innerText = "Shared: False";
+                        document.getElementById("toggle-share-status").innerText = "Share";
+                    }
+
+                    loaded = true;
+                })
+            }
+
+            setTimeout(function () {
+                if (!(loaded)) {
+                    document.getElementById("title-error").innerText = "Loading is taking longer than expected. This task may no longer exist or, is not shared with you.";
+                }
+            }, 5000)
+
+            load();
+        </script>
+    </body>
+</html>

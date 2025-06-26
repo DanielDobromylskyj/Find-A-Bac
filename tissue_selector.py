@@ -14,17 +14,17 @@ else:
     import openslide
 
 
-# todo - check to see if we need to fill the internals of a "group" incase we missed any
+# todo - check to see if we need to fill the internals with a "group" incase we missed any
 
 def AverageBox(data, x, y, size):
-    r, g, b = 0, 0, 0
+    r, g, b = int(0), int(0), int(0)
 
     for offsetX in range(size):
         for offsetY in range(size):
             pixel = data[min(x + offsetX, data.shape[0] - 1)][min(y + offsetY, data.shape[1] - 1)]
-            r += pixel[0]
-            g += pixel[1]
-            b += pixel[2]
+            r += int(pixel[0])
+            g += int(pixel[1])
+            b += int(pixel[2])
 
     pixel_count = size ** 2
     return r // pixel_count, g // pixel_count, b // pixel_count
