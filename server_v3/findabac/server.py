@@ -60,6 +60,7 @@ class WebServer:
         self.app.add_url_rule('/api/upload', view_func=self.upload_file, methods=['POST'])
 
         self.app.add_url_rule('/api/tasks', view_func=self.get_users_active_tasks, methods=['GET'])
+        self.app.add_url_rule('/api/archived/recent', view_func=self.get_users_recently_completed, methods=['GET'])
 
         self.app.add_url_rule('/static/<path:path>', view_func=self.serve_static)
 
@@ -89,6 +90,10 @@ class WebServer:
     @login_required
     def get_users_active_tasks(self):
         return self.processor.get_users_active_tasks(current_user.id), 200
+
+    @login_required
+    def get_users_recently_completed(self):
+        return self.processor.get_users_recently_complete(current_user.id), 200
 
     @login_required
     def dashboard(self):
@@ -168,3 +173,4 @@ class WebServer:
 
     def shutdown(self):
         self.processor.queue.shutdown()
+        self.processor.shutdown = True

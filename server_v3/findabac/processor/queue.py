@@ -12,6 +12,7 @@ class Queue:
 
         self.awaiting_queue = []
         self.processing_queue = []
+        self.recently_processed_queue = {}
 
         self.shutting_down = False
         self.load_after_shutdown()
@@ -39,6 +40,15 @@ class Queue:
             f.write(task.to_bytes(archive=False))
 
 
+        if not task.get_user_id() in self.recently_processed_queue:
+            self.recently_processed_queue[task.get_user_id()] = []
+
+        self.recently_processed_queue[task.get_user_id()].append(task)
+
+        if len(self.recently_processed_queue[task.get_user_id()]) > 4:
+            self.recently_processed_queue[task.get_user_id()].pop(0)
+
+
     def archive_task(self, task_id):
         task = self.get_task_by_id(task_id)
 
@@ -60,6 +70,11 @@ class Queue:
                 tasks.append(task)
 
         return tasks
+
+    def get_recently_processed(self, user_id):
+        if user_id in self.recently_processed_queue:
+            return self.recently_processed_queue[user_id]
+        return []
 
     def get_next_task(self):
         if len(self.awaiting_queue) == 0:
@@ -87,6 +102,8 @@ class Queue:
                 file_bytes = f.read()
 
             return ScanItem.from_bytes(self.openslide, file_bytes)
+
+        return None
 
 
     def enqueue_task(self, task):
