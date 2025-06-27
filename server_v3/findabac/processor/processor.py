@@ -25,7 +25,7 @@ class Processor:
     def __task_to_simple_dict(task):
         return {
             "task_id": task.get_task_id(),
-            "percentage": task.get_percentage(),
+            "percentage": task.get_progress(),
             "name": os.path.basename(task.get_path())[36:]  # Starts with UUID4 then name
         }
 

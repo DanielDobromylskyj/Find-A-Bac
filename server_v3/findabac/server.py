@@ -1,11 +1,14 @@
 import os
 import sqlite3
+import uuid
+
 from argon2 import PasswordHasher, exceptions
 from importlib.resources import files
-from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user, login_manager
 from flask import Flask, jsonify, request, redirect, url_for, send_file, Response
 
 from .database import setup_database
+from .processor.processor import Processor
 
 
 class User(UserMixin):
@@ -15,13 +18,12 @@ class User(UserMixin):
 
 package_root = files('findabac')
 
-
 class WebServer:
     def __init__(self):
         self.app = Flask(__name__)  # Initialize Flask
         self.app.secret_key = os.urandom(24)
 
-        self.app.config['UPLOAD_FOLDER'] = "/uploads"
+        self.app.config['UPLOAD_FOLDER'] = "uploads"
 
         self.setup_routes()  # Setup routes
 
@@ -54,7 +56,7 @@ class WebServer:
         self.app.add_url_rule('/dashboard', view_func=self.dashboard)
         self.app.add_url_rule('/queue', view_func=self.queue)
 
-        self.app.add_url_rule('/upload', view_func=self.upload_file)
+        self.app.add_url_rule('/upload', view_func=self.upload_file, methods=['POST'])
 
         self.app.add_url_rule('/static/<path:path>', view_func=self.serve_static)
 
@@ -72,10 +74,13 @@ class WebServer:
             if file.filename == '':
                 continue
 
-            filename = str(uuid.uuid4()) + str(file.filename)
-            file.save(os.path.join(self.app.config['UPLOAD_FOLDER'], filename))
-            print(f"[Server] Saved File '{filename}'")
+            path = os.path.join(self.app.config['UPLOAD_FOLDER'], str(uuid.uuid4()) + str(file.filename))
+            file.save(path)
 
+            self.processor.enqueue_task(path, current_user.id)
+            print(f"[Server] Saved File '{path}'")
+
+        print("[Debug]", self.processor.get_users_active_tasks(current_user.id))
         return redirect('/dashboard')
 
     @login_required
@@ -98,7 +103,7 @@ class WebServer:
         cursor.close()
         conn.close()
 
-        print("Created user {}".format(email))
+        print("[Server] Created user {}".format(email))
 
 
 

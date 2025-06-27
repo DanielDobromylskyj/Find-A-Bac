@@ -84,20 +84,26 @@ class Queue:
 
     def enqueue_task(self, task):
         if self.shutting_down:
-            return False
+            return
 
         self.awaiting_queue.append(task)
 
 
     def shutdown(self):
+        if self.shutting_down:
+            return
+
         self.shutting_down = True
 
+        print("[Server] Shutting down -> Saving Awaiting Queue")
+
         for task in self.awaiting_queue:
-            task_bytes = task.to_bytes()
+            task_bytes = task.to_bytes(False)
 
             with open(os.path.join(Queue.STORAGE_AWAITING_PATH, str(task.get_task_id())), "wb") as f:
                 f.write(task_bytes)
 
+        print(f"[Server] Saved {len(self.awaiting_queue)} tasks from queue to disk")
         self.awaiting_queue = []
 
         while len(self.processing_queue) > 0:
@@ -107,6 +113,8 @@ class Queue:
     def load_after_shutdown(self):
         self.shutting_down = False
 
+        print("[Server] Loading Awaiting Queue From Disk")
+
         for file in os.listdir(Queue.STORAGE_AWAITING_PATH):
             full_path = os.path.join(Queue.STORAGE_AWAITING_PATH, file)
 
@@ -115,6 +123,7 @@ class Queue:
 
             task = ScanItem.from_bytes(self.openslide, file_bytes)
             self.awaiting_queue.append(task)
+            print(f"[Server] Loaded {file}")
 
             os.remove(full_path)
 

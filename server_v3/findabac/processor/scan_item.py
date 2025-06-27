@@ -99,19 +99,19 @@ class ScanItem:
         path_length = int.from_bytes(data[index:index+2], byteorder='little')
         index += 2
 
-        path = data[index:index+path_length]
+        path = data[index:index+path_length].decode()
         index += path_length
 
         user_id_length = int.from_bytes(data[index:index+2], byteorder='little')
         index += 2
 
-        user_id = data[index:index+user_id_length]
+        user_id = data[index:index+user_id_length].decode()
         index += user_id_length
 
         task_id_length = int.from_bytes(data[index:index + 2], byteorder='little')
         index += 2
 
-        task_id = data[index:index + task_id_length]
+        task_id = data[index:index + task_id_length].decode()
         index += task_id_length
 
         item = ScanItem(openslide, path, user_id, task_id, is_archived)

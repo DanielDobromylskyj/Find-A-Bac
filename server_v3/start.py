@@ -17,6 +17,6 @@ def handle_signal(sig, frame):
 
 signal.signal(signal.SIGINT, handle_signal)  # Ctrl+C
 signal.signal(signal.SIGTERM, handle_signal)  # Ctrl+C
-atexit.register(cleanup)  # On Exit
+atexit.register(cleanup)  # On Exit (Normal)
 
 instance.run()
