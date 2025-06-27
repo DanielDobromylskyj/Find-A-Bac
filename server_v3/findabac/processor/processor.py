@@ -47,11 +47,11 @@ class Processor:
 
             if task:
                 print(f"[Server] Processing task: {task.get_task_id()}")
-                i = -5
+                i = -8
                 while i < 100:
                     task.set_progress(max(0, i))
                     i += 1
-                    time.sleep(0.1)
+                    time.sleep(1)
 
                 self.queue.move_to_cold_storage(task.get_task_id())
 
