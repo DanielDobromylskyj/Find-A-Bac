@@ -20,6 +20,9 @@ class WebServer:
     def __init__(self):
         self.app = Flask(__name__)  # Initialize Flask
         self.app.secret_key = os.urandom(24)
+
+        self.app.config['UPLOAD_FOLDER'] = "/uploads"
+
         self.setup_routes()  # Setup routes
 
         self.database_path = 'user_data.db'
