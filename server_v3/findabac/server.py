@@ -130,3 +130,6 @@ class WebServer:
         port = 80
 
         self.app.run(ip, port, debug=debug)
+
+    def shutdown(self):
+        self.processor.queue.shutdown()
