@@ -56,6 +56,22 @@ class WebServer:
         return self.serve_html("login")
 
     @login_required
+    def upload_file(self):
+        if 'file' not in request.files:
+            return 'No file uploaded.', 400
+
+        files = request.files.getlist('file')
+        for file in files:
+            if file.filename == '':
+                continue
+
+            filename = str(uuid.uuid4()) + str(file.filename)
+            file.save(os.path.join(self.app.config['UPLOAD_FOLDER'], filename))
+            print(f"[Server] Saved File '{filename}'")
+
+        return redirect('/dashboard')
+
+    @login_required
     def dashboard(self):
         return self.serve_html("dashboard")
 
