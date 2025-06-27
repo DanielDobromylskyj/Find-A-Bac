@@ -49,6 +49,8 @@ class WebServer:
         self.app.add_url_rule('/dashboard', view_func=self.dashboard)
         self.app.add_url_rule('/queue', view_func=self.queue)
 
+        self.app.add_url_rule('/upload', view_func=self.upload_file)
+
         self.app.add_url_rule('/static/<path:path>', view_func=self.serve_static)
 
 
