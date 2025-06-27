@@ -37,6 +37,8 @@ class WebServer:
         self.login_manager.user_loader(self.user_loader)
         self.login_manager.init_app(self.app)
 
+        self.processor = Processor()
+
     @staticmethod
     def user_loader(user_id):
         user = User(user_id)
