@@ -26,6 +26,7 @@ class Processor:
         return {
             "task_id": task.get_task_id(),
             "percentage": task.get_percentage(),
+            "name": os.path.basename(task.get_path())[36:]  # Starts with UUID4 then name
         }
 
     def get_users_active_tasks(self, user_id):
