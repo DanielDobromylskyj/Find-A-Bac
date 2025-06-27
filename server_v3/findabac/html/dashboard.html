@@ -80,6 +80,34 @@
     .progress-bar {
       height: 10px;
       background-color: #3478f6;
+      position: relative; /* <--- This is the magic */
+    }
+
+
+    .progress-bar.shiny::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: -50%;
+      width: 50%;
+      height: 100%;
+      background: linear-gradient(
+        120deg,
+        rgba(255, 255, 255, 0.2),
+        rgba(255, 255, 255, 0.8),
+        rgba(255, 255, 255, 0.2)
+      );
+      animation: shine 1.5s infinite;
+      pointer-events: none;
+    }
+
+    @keyframes shine {
+      0% {
+        left: -50%;
+      }
+      100% {
+        left: 100%;
+      }
     }
 
     .task-content {
@@ -160,16 +188,17 @@
     <!-- Hey Jack, Could you make this look better? Cheers. (Jesus I suck at web dev) -->
     <div class="card upload-section">
       <h2>Upload Tasks</h2>
-      <form action="/upload" method="POST" enctype="multipart/form-data">
+      <form action="/api/upload" method="POST" enctype="multipart/form-data">
         <input type="file" name="file" id="file-upload" multiple style="display: none;">
         <label for="file-upload" class="upload-btn" style="cursor: pointer;">Choose Files</label>
         <button type="submit" class="upload-btn">Upload</button>
       </form>
     </div>
 
-    <div class="card queue-section">
+    <div class="card queue-section" id="queue">
       <h2>Processing Queue</h2>
 
+      <!--
       <div class="task">
         <div class="task-content">
           <div class="task-name">task_name_1.tiff</div>
@@ -180,6 +209,7 @@
         </div>
       </div>
 
+
       <div class="task">
         <div class="task-content">
           <div class="task-name">task_name_2.tiff</div>
@@ -189,7 +219,6 @@
           <button class="open-btn">Open</button>
         </div>
       </div>
-
       <div class="task">
         <div class="task-content">
           <div class="task-name">task_name_3.tiff</div>
@@ -199,6 +228,8 @@
           <button class="open-btn">Open</button>
         </div>
       </div>
+      -->
+
     </div>
   </div>
 

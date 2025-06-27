@@ -43,6 +43,7 @@ class WebServer:
         self.login_manager.init_app(self.app)
 
         self.processor = Processor()
+        self.processor.start()
 
     @staticmethod
     def user_loader(user_id):
@@ -56,7 +57,9 @@ class WebServer:
         self.app.add_url_rule('/dashboard', view_func=self.dashboard)
         self.app.add_url_rule('/queue', view_func=self.queue)
 
-        self.app.add_url_rule('/upload', view_func=self.upload_file, methods=['POST'])
+        self.app.add_url_rule('/api/upload', view_func=self.upload_file, methods=['POST'])
+
+        self.app.add_url_rule('/api/tasks', view_func=self.get_users_active_tasks, methods=['GET'])
 
         self.app.add_url_rule('/static/<path:path>', view_func=self.serve_static)
 
@@ -82,6 +85,10 @@ class WebServer:
 
         print("[Debug]", self.processor.get_users_active_tasks(current_user.id))
         return redirect('/dashboard')
+
+    @login_required
+    def get_users_active_tasks(self):
+        return self.processor.get_users_active_tasks(current_user.id), 200
 
     @login_required
     def dashboard(self):

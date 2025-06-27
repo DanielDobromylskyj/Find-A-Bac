@@ -61,7 +61,14 @@ class Queue:
 
         return tasks
 
+    def get_next_task(self):
+        if len(self.awaiting_queue) == 0:
+            return None
 
+        task = self.awaiting_queue[0]
+
+        self.move_to_processing(task.get_task_id())
+        return task
 
     def get_task_by_id(self, task_id):
         # Search HOT storage
@@ -106,9 +113,12 @@ class Queue:
         print(f"[Server] Saved {len(self.awaiting_queue)} tasks from queue to disk")
         self.awaiting_queue = []
 
+        print(f"[Server] Awaiting all currently processing tasks to end...")
+
         while len(self.processing_queue) > 0:
             time.sleep(1)  # Await to finish processing current items before shutdown
 
+        print("[Server] Queue shutdown")
 
     def load_after_shutdown(self):
         self.shutting_down = False

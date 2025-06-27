@@ -10,7 +10,7 @@ class ScanItem:
         self.__path = path
         self.__user_id = user_id
         self.__task_id = task_id
-        self.__progress = 0
+        self.__progress = -1
         self.__is_archived = is_archived
 
         if not is_archived:
