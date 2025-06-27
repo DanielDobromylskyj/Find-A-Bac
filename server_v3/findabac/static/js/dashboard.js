@@ -124,5 +124,5 @@ function update_processing_queue() {
 }
 
 
-
+update_processing_queue();
 setInterval(update_processing_queue, 1000);
