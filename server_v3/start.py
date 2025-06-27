@@ -1,6 +1,8 @@
 from findabac import server
 
-# Chatgpt storage wisdom: https://chatgpt.com/c/68570890-4390-800b-b482-69d4c93982ec
+import signal
+import atexit
+import sys
 
 
 instance = server.WebServer()
