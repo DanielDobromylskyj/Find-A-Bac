@@ -87,11 +87,28 @@
       z-index: 1;
     }
 
+    .task-content-completed {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      justify-content: space-between;
+      align-items: center; /* optional: vertically center items */
+    }
+
     .task-name {
       font-weight: bold;
     }
 
     .open-btn {
+      background-color: #3478f6;
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .open-btn-completed {
       background-color: #3478f6;
       color: white;
       border: none;
@@ -126,25 +143,28 @@
       <h2>Recently Completed</h2>
 
       <div class="task">
-        <div class="task-content">
+        <div class="task-content-completed">
           <div class="task-name">task_name_4.tiff</div>
-          <div>Completed (2 hours ago)</div>
-          <button class="open-btn">Open</button>
+          <button class="open-btn-completed">Open</button>
         </div>
       </div>
 
       <div class="task">
-        <div class="task-content">
+        <div class="task-content-completed">
           <div class="task-name">task_name_5.tiff</div>
-          <div>Completed (10 hours ago)</div>
-          <button class="open-btn">Open</button>
+          <button class="open-btn-completed">Open</button>
         </div>
       </div>
     </div>
 
+    <!-- Hey Jack, Could you make this look better? Cheers. (Jesus I suck at web dev) -->
     <div class="card upload-section">
       <h2>Upload Tasks</h2>
-      <button class="upload-btn">Upload Files</button>
+      <form action="/upload" method="POST" enctype="multipart/form-data">
+        <input type="file" name="file" id="file-upload" multiple style="display: none;">
+        <label for="file-upload" class="upload-btn" style="cursor: pointer;">Choose Files</label>
+        <button type="submit" class="upload-btn">Upload</button>
+      </form>
     </div>
 
     <div class="card queue-section">

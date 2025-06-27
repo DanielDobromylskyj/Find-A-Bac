@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Find A Bac Dashboard</title>
+  <style>
+    body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background: url('static/img/background_1.png') no-repeat center center fixed;
+        background-size: cover;
+        color: #222;
+    }
+
+    .navbar {
+        display: flex;
+        justify-content: space-between;
+        padding: 1rem 2rem;
+        background-color: rgba(255, 255, 255, 0.9);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .navbar h1 {
+      margin: 0;
+    }
+
+    .navbar a {
+        margin-left: 20px;
+        text-decoration: none;
+        color: #333;
+        font-weight: bold;
+    }
+
+    .container {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: auto auto;
+        gap: 1.5rem;
+        padding: 2rem;
+    }
+
+    .card {
+        background-color: rgba(255,255,255,0.9);
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+    }
+
+    .card h2 {
+        margin-top: 0;
+    }
+
+    .task {
+        margin-bottom: 1rem;
+        padding: 1rem;
+        border-radius: 8px;
+        background-color: #f5f5f5;
+    }
+
+    .task-content {
+        position: relative;
+        z-index: 1;
+
+        display: flex;
+        gap: 10px; /* optional spacing */
+    }
+
+    .task-name {
+        font-weight: bold;
+    }
+
+    .task-text {
+        display: inline-block;
+        margin-right: 10px; /* optional spacing */
+        font-size: 0.8rem;
+    }
+
+  </style>
+</head>
+<body>
+  <div class="navbar">
+    <h1>Find A Bac</h1>
+    <div>
+        <a href="/dashboard">Home</a>
+        <a href="/queue">Queue</a>
+        <a href="/archived">Archived Tasks</a>
+        <a href="/profile">Profile</a>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="card queue-section">
+      <h2>Queue</h2>
+
+      <div class="task">
+        <div class="task-content">
+          <div class="task-name">task_name_7.tiff</div>
+          <div class="task-text">Calculating ETA</div>
+        </div>
+      </div>
+
+      <div class="task">
+        <div class="task-content">
+          <div class="task-name">task_name_8.tiff</div>
+          <div class="task-text">Calculating ETA</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="static/js/queue.js"></script>
+</body>
+</html>

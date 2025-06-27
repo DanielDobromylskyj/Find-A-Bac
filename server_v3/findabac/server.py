@@ -47,6 +47,7 @@ class WebServer:
         self.app.add_url_rule('/', view_func=self.home)
         self.app.add_url_rule('/login', view_func=self.login, methods=['POST'])
         self.app.add_url_rule('/dashboard', view_func=self.dashboard)
+        self.app.add_url_rule('/queue', view_func=self.queue)
 
         self.app.add_url_rule('/static/<path:path>', view_func=self.serve_static)
 
@@ -57,6 +58,10 @@ class WebServer:
     @login_required
     def dashboard(self):
         return self.serve_html("dashboard")
+
+    @login_required
+    def queue(self):
+        return self.serve_html("queue")
 
     def create_user(self, email, password, auth_level=0):
         conn = sqlite3.connect(self.database_path)
