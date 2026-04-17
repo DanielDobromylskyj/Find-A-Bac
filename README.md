@@ -4,6 +4,12 @@ A web based display and dashboard to interact with my Myconet implementation to 
 
 This repository is in need of a cleanup
 
+## PyMycoNet ##
+
+PyMycoNet is a custom developed tool for running and training neural networks.
+
+https://github.com/DanielDobromylskyj/PyMycoNet
+
 
 
 ## Credits ##
